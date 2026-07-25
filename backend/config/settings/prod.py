@@ -10,8 +10,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 if not CORS_ALLOWED_ORIGINS:
     raise RuntimeError(
-        "CORS_ALLOWED_ORIGINS must be set in production "
-        "(comma-separated list of exact origins)."
+        "CORS_ALLOWED_ORIGINS must be set in production (comma-separated list of exact origins)."
     )
 CORS_ALLOW_CREDENTIALS = False  # JWT in Authorization header, no cookies
 CORS_ALLOW_ALL_ORIGINS = False  # belt-and-braces

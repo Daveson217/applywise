@@ -36,9 +36,7 @@ class TestContactCRUD:
 
     def test_update_contact(self, authenticated_client, user):
         contact = Contact.objects.create(user=user, name="Jane")
-        response = authenticated_client.patch(
-            f"{CONTACTS_URL}{contact.pk}/", {"company": "Meta"}
-        )
+        response = authenticated_client.patch(f"{CONTACTS_URL}{contact.pk}/", {"company": "Meta"})
         assert response.status_code == status.HTTP_200_OK
         assert response.data["company"] == "Meta"
 
@@ -49,9 +47,7 @@ class TestContactCRUD:
 
     def test_contact_has_interaction_count(self, authenticated_client, user):
         contact = Contact.objects.create(user=user, name="Jane")
-        Interaction.objects.create(
-            contact=contact, type="coffee_chat", date="2026-01-01"
-        )
+        Interaction.objects.create(contact=contact, type="coffee_chat", date="2026-01-01")
         response = authenticated_client.get(f"{CONTACTS_URL}{contact.pk}/")
         assert response.data["interactions_count"] == 1
 
@@ -65,29 +61,19 @@ class TestInteractions:
             "date": "2026-06-01",
             "notes": "Great conversation about team culture",
         }
-        response = authenticated_client.post(
-            f"{CONTACTS_URL}{contact.pk}/interactions/", data
-        )
+        response = authenticated_client.post(f"{CONTACTS_URL}{contact.pk}/interactions/", data)
         assert response.status_code == status.HTTP_201_CREATED
 
     def test_list_interactions(self, authenticated_client, user):
         contact = Contact.objects.create(user=user, name="Jane")
-        Interaction.objects.create(
-            contact=contact, type="email", date="2026-01-01"
-        )
-        response = authenticated_client.get(
-            f"{CONTACTS_URL}{contact.pk}/interactions/"
-        )
+        Interaction.objects.create(contact=contact, type="email", date="2026-01-01")
+        response = authenticated_client.get(f"{CONTACTS_URL}{contact.pk}/interactions/")
         assert response.status_code == status.HTTP_200_OK
 
     def test_interaction_scoped(self, authenticated_client, user, other_user):
         other_contact = Contact.objects.create(user=other_user, name="Secret")
-        Interaction.objects.create(
-            contact=other_contact, type="call", date="2026-01-01"
-        )
-        response = authenticated_client.get(
-            f"{CONTACTS_URL}{other_contact.pk}/interactions/"
-        )
+        Interaction.objects.create(contact=other_contact, type="call", date="2026-01-01")
+        response = authenticated_client.get(f"{CONTACTS_URL}{other_contact.pk}/interactions/")
         # paginated response — check count instead of len
         data = response.data
         if isinstance(data, dict) and "count" in data:

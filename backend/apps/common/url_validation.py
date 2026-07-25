@@ -23,28 +23,28 @@ ALLOWED_SCHEMES = {"http", "https"}
 # Includes loopback, link-local (AWS/GCP/Azure metadata), private RFC1918,
 # carrier-grade NAT, multicast, broadcast, reserved.
 _FORBIDDEN_IPV4_NETS = [
-    ipaddress.IPv4Network("0.0.0.0/8"),       # "this host"
-    ipaddress.IPv4Network("10.0.0.0/8"),      # Private
-    ipaddress.IPv4Network("100.64.0.0/10"),   # Carrier-grade NAT
-    ipaddress.IPv4Network("127.0.0.0/8"),     # Loopback
+    ipaddress.IPv4Network("0.0.0.0/8"),  # "this host"
+    ipaddress.IPv4Network("10.0.0.0/8"),  # Private
+    ipaddress.IPv4Network("100.64.0.0/10"),  # Carrier-grade NAT
+    ipaddress.IPv4Network("127.0.0.0/8"),  # Loopback
     ipaddress.IPv4Network("169.254.0.0/16"),  # Link-local (AWS/GCP metadata!)
-    ipaddress.IPv4Network("172.16.0.0/12"),   # Private
-    ipaddress.IPv4Network("192.0.0.0/24"),    # IETF protocol assignments
-    ipaddress.IPv4Network("192.0.2.0/24"),    # TEST-NET
+    ipaddress.IPv4Network("172.16.0.0/12"),  # Private
+    ipaddress.IPv4Network("192.0.0.0/24"),  # IETF protocol assignments
+    ipaddress.IPv4Network("192.0.2.0/24"),  # TEST-NET
     ipaddress.IPv4Network("192.168.0.0/16"),  # Private
-    ipaddress.IPv4Network("198.18.0.0/15"),   # Benchmarking
+    ipaddress.IPv4Network("198.18.0.0/15"),  # Benchmarking
     ipaddress.IPv4Network("198.51.100.0/24"),
     ipaddress.IPv4Network("203.0.113.0/24"),
-    ipaddress.IPv4Network("224.0.0.0/4"),     # Multicast
-    ipaddress.IPv4Network("240.0.0.0/4"),     # Reserved
+    ipaddress.IPv4Network("224.0.0.0/4"),  # Multicast
+    ipaddress.IPv4Network("240.0.0.0/4"),  # Reserved
     ipaddress.IPv4Network("255.255.255.255/32"),
 ]
 
 _FORBIDDEN_IPV6_NETS = [
-    ipaddress.IPv6Network("::1/128"),         # loopback
-    ipaddress.IPv6Network("fc00::/7"),        # unique local
-    ipaddress.IPv6Network("fe80::/10"),       # link-local
-    ipaddress.IPv6Network("ff00::/8"),        # multicast
+    ipaddress.IPv6Network("::1/128"),  # loopback
+    ipaddress.IPv6Network("fc00::/7"),  # unique local
+    ipaddress.IPv6Network("fe80::/10"),  # link-local
+    ipaddress.IPv6Network("ff00::/8"),  # multicast
     # IPv4-mapped IPv6 — block them too (otherwise attacker uses ::ffff:127.0.0.1)
     ipaddress.IPv6Network("::ffff:0:0/96"),
 ]
@@ -89,9 +89,7 @@ def validate_external_url(url: str, *, max_length: int = 2048) -> str:
     parsed = urlparse(url.strip())
 
     if parsed.scheme.lower() not in ALLOWED_SCHEMES:
-        raise URLValidationError(
-            f"Scheme '{parsed.scheme}' not allowed (must be http or https)"
-        )
+        raise URLValidationError(f"Scheme '{parsed.scheme}' not allowed (must be http or https)")
 
     host = (parsed.hostname or "").lower().strip()
     if not host:
@@ -103,9 +101,7 @@ def validate_external_url(url: str, *, max_length: int = 2048) -> str:
     try:
         ip = ipaddress.ip_address(host)
         if _ip_is_forbidden(ip):
-            raise URLValidationError(
-                f"IP {host} is in a private/reserved range"
-            )
+            raise URLValidationError(f"IP {host} is in a private/reserved range")
         return url
     except ValueError:
         pass  # not a literal IP, fall through to DNS resolution
@@ -126,8 +122,6 @@ def validate_external_url(url: str, *, max_length: int = 2048) -> str:
         except ValueError:
             continue
         if _ip_is_forbidden(ip):
-            raise URLValidationError(
-                f"Host '{host}' resolves to private/reserved IP {addr}"
-            )
+            raise URLValidationError(f"Host '{host}' resolves to private/reserved IP {addr}")
 
     return url

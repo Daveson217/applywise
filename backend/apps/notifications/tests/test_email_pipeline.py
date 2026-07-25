@@ -12,9 +12,7 @@ from apps.watchlist.tasks import _check_rules
 
 @pytest.mark.django_db
 class TestWatchlistTriggersNotification:
-    def test_matched_rule_creates_notification(
-        self, user, django_capture_on_commit_callbacks
-    ):
+    def test_matched_rule_creates_notification(self, user, django_capture_on_commit_callbacks):
         company = WatchlistCompany.objects.create(
             user=user, name="Stripe", ats_provider="greenhouse"
         )
@@ -32,9 +30,7 @@ class TestWatchlistTriggersNotification:
             location="Remote",
         )
 
-        with patch(
-            "apps.notifications.tasks.send_notification_email.delay"
-        ) as mock_send:
+        with patch("apps.notifications.tasks.send_notification_email.delay") as mock_send:
             # Capture and execute on_commit callbacks so we can assert they ran
             with django_capture_on_commit_callbacks(execute=True):
                 _check_rules(posting, company)
@@ -65,9 +61,7 @@ class TestWatchlistTriggersNotification:
             url="https://example.com/job/123",
         )
 
-        with patch(
-            "apps.notifications.tasks.send_notification_email.delay"
-        ) as mock_send:
+        with patch("apps.notifications.tasks.send_notification_email.delay") as mock_send:
             _check_rules(posting, company)
 
         assert Notification.objects.filter(user=user).count() == 0
@@ -84,9 +78,7 @@ class TestWatchlistTriggersNotification:
             url="https://example.com/job/123",
         )
 
-        with patch(
-            "apps.notifications.tasks.send_notification_email.delay"
-        ) as mock_send:
+        with patch("apps.notifications.tasks.send_notification_email.delay") as mock_send:
             _check_rules(posting, company)
 
         assert Notification.objects.filter(user=user).count() == 0
@@ -96,12 +88,8 @@ class TestWatchlistTriggersNotification:
         company = WatchlistCompany.objects.create(
             user=user, name="Stripe", ats_provider="greenhouse"
         )
-        WatchlistRule.objects.create(
-            company=company, keywords=["intern"], is_active=True
-        )
-        WatchlistRule.objects.create(
-            company=company, keywords=["engineer"], is_active=True
-        )
+        WatchlistRule.objects.create(company=company, keywords=["intern"], is_active=True)
+        WatchlistRule.objects.create(company=company, keywords=["engineer"], is_active=True)
         posting = JobPosting.objects.create(
             company=company,
             external_id="123",
@@ -109,10 +97,9 @@ class TestWatchlistTriggersNotification:
             url="https://example.com/job/123",
         )
 
-        with patch(
-            "apps.notifications.tasks.send_notification_email.delay"
-        ) as mock_send:
+        with patch("apps.notifications.tasks.send_notification_email.delay") as mock_send:
             from django.db import transaction
+
             with transaction.atomic():
                 _check_rules(posting, company)
             # Manually fire on_commit hooks queued in the atomic block above
@@ -126,12 +113,8 @@ class TestWatchlistTriggersNotification:
 
 @pytest.mark.django_db
 class TestNotificationSignal:
-    def test_notification_create_enqueues_email(
-        self, user, django_capture_on_commit_callbacks
-    ):
-        with patch(
-            "apps.notifications.tasks.send_notification_email.delay"
-        ) as mock_send:
+    def test_notification_create_enqueues_email(self, user, django_capture_on_commit_callbacks):
+        with patch("apps.notifications.tasks.send_notification_email.delay") as mock_send:
             with django_capture_on_commit_callbacks(execute=True):
                 notif = Notification.objects.create(
                     user=user,
@@ -143,13 +126,9 @@ class TestNotificationSignal:
         mock_send.assert_called_once_with(notif.id)
 
     def test_notification_update_does_not_fire(self, user):
-        notif = Notification.objects.create(
-            user=user, type="system", title="Hi", body="Body"
-        )
+        notif = Notification.objects.create(user=user, type="system", title="Hi", body="Body")
 
-        with patch(
-            "apps.notifications.tasks.send_notification_email.delay"
-        ) as mock_send:
+        with patch("apps.notifications.tasks.send_notification_email.delay") as mock_send:
             notif.is_read = True
             notif.save()
 

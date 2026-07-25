@@ -69,7 +69,7 @@ class TestWatchlistImportPreview:
 
     def test_preview_bom_stripped(self, authenticated_client):
         # Excel-saved CSVs start with a UTF-8 BOM. Make sure we tolerate it.
-        raw = "﻿name,careers_url\nStripe,https://x.com".encode("utf-8")
+        raw = "﻿name,careers_url\nStripe,https://x.com".encode()
         f = SimpleUploadedFile("companies.csv", raw, content_type="text/csv")
         response = authenticated_client.post(URL, {"file": f}, format="multipart")
         assert response.status_code == status.HTTP_200_OK
@@ -110,9 +110,7 @@ class TestWatchlistImportCommit:
         assert stripe.ats_provider == "greenhouse"
         assert stripe.ats_company_slug == "stripe"
 
-    def test_commit_skips_case_insensitive_duplicates(
-        self, authenticated_client, user
-    ):
+    def test_commit_skips_case_insensitive_duplicates(self, authenticated_client, user):
         Subscription.objects.create(user=user, plan="pro", status="active")
         WatchlistCompany.objects.create(user=user, name="Stripe")
 
@@ -135,9 +133,7 @@ class TestWatchlistImportCommit:
 
         response = self._preview_and_commit(
             authenticated_client,
-            [
-                {"name": f"New{i}", "careers_url": ""} for i in range(5)
-            ],
+            [{"name": f"New{i}", "careers_url": ""} for i in range(5)],
         )
         assert response.status_code == status.HTTP_200_OK
         # Only 2 slots left → creates 2, skips 3

@@ -126,9 +126,7 @@ class TestApplicationDetail:
         app = Application.objects.create(
             user=user, company="Google", role="SWE", job_type="internship"
         )
-        response = authenticated_client.patch(
-            app_detail_url(app.pk), {"status": "applied"}
-        )
+        response = authenticated_client.patch(app_detail_url(app.pk), {"status": "applied"})
         assert response.status_code == status.HTTP_200_OK
 
     def test_update_status_creates_activity(self, authenticated_client, user):
@@ -140,9 +138,7 @@ class TestApplicationDetail:
             status="saved",
         )
         authenticated_client.patch(app_detail_url(app.pk), {"status": "applied"})
-        activity = ApplicationActivity.objects.filter(
-            application=app, event_type="status_change"
-        )
+        activity = ApplicationActivity.objects.filter(application=app, event_type="status_change")
         assert activity.exists()
         assert activity.first().old_value == "saved"
         assert activity.first().new_value == "applied"
@@ -180,12 +176,8 @@ class TestApplicationFiltering:
         assert response.data["count"] == 1
 
     def test_search_by_company(self, authenticated_client, user):
-        Application.objects.create(
-            user=user, company="Google", role="Dev", job_type="internship"
-        )
-        Application.objects.create(
-            user=user, company="Meta", role="Dev", job_type="internship"
-        )
+        Application.objects.create(user=user, company="Google", role="Dev", job_type="internship")
+        Application.objects.create(user=user, company="Meta", role="Dev", job_type="internship")
         response = authenticated_client.get(APPS_URL, {"search": "Google"})
         assert response.data["count"] == 1
 
@@ -205,9 +197,7 @@ class TestApplicationActivity:
         app = Application.objects.create(
             user=user, company="Google", role="SWE", job_type="internship"
         )
-        ApplicationActivity.objects.create(
-            application=app, event_type="created"
-        )
+        ApplicationActivity.objects.create(application=app, event_type="created")
         response = authenticated_client.get(app_activity_url(app.pk))
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) >= 1
@@ -223,9 +213,7 @@ class TestApplicationActivity:
 @pytest.mark.django_db
 class TestTagAPI:
     def test_create_tag(self, authenticated_client):
-        response = authenticated_client.post(
-            TAGS_URL, {"name": "FAANG", "color": "#EF4444"}
-        )
+        response = authenticated_client.post(TAGS_URL, {"name": "FAANG", "color": "#EF4444"})
         assert response.status_code == status.HTTP_201_CREATED
 
     def test_list_own_tags(self, authenticated_client, user, other_user):

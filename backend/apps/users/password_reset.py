@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from typing import cast
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
@@ -86,13 +85,14 @@ def _send_reset_email(user, token: str) -> None:
     # Not using our HTML template renderer here — the link is the only
     # dynamic value and it's a URL we generated (not user content).
     import html as _html
+
     safe_link = _html.escape(link, quote=True)
     safe_name = _html.escape(user.first_name or "there", quote=True)
     html_body = (
         f"<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:24px auto;color:#111\">"
-        f"<h2 style=\"margin:0 0 12px\">Reset your Applywise password</h2>"
+        f'<h2 style="margin:0 0 12px">Reset your Applywise password</h2>'
         f"<p>Hi {safe_name}, click the button below within the next hour to choose a new password.</p>"
-        f"<p><a href=\"{safe_link}\" style=\"display:inline-block;background:#3B82F6;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:500\">Reset password</a></p>"
+        f'<p><a href="{safe_link}" style="display:inline-block;background:#3B82F6;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:500">Reset password</a></p>'
         f"<p style=\"color:#666;font-size:13px\">If you didn't request this, you can ignore this email — your password won't change.</p>"
         f"</div>"
     )
@@ -210,9 +210,7 @@ class PasswordResetConfirmView(APIView):
                 {"error": "This reset link has already been used."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if not _constant_time_equals(
-            user.password_reset_token_hash, expected_hash
-        ):
+        if not _constant_time_equals(user.password_reset_token_hash, expected_hash):
             return Response(
                 {"error": "This reset link is invalid or has expired."},
                 status=status.HTTP_400_BAD_REQUEST,

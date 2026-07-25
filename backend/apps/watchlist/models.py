@@ -27,13 +27,9 @@ class WatchlistCompany(models.Model):
     )
     name = models.CharField(max_length=255)
     careers_url = models.URLField(blank=True)
-    ats_provider = models.CharField(
-        max_length=20, choices=ATS_CHOICES, blank=True
-    )
+    ats_provider = models.CharField(max_length=20, choices=ATS_CHOICES, blank=True)
     ats_company_slug = models.CharField(max_length=255, blank=True)
-    scrape_status = models.CharField(
-        max_length=20, choices=SCRAPE_STATUS_CHOICES, default="active"
-    )
+    scrape_status = models.CharField(max_length=20, choices=SCRAPE_STATUS_CHOICES, default="active")
     last_checked_at = models.DateTimeField(null=True, blank=True)
     last_error = models.TextField(blank=True)
     consecutive_failures = models.IntegerField(default=0)

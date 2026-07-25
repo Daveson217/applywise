@@ -85,9 +85,7 @@ class TestPasswordChange:
         refresh2 = login2.data["refresh"]
 
         # Device 1 changes password, preserving its own refresh
-        api_client.credentials(
-            HTTP_AUTHORIZATION=f"Bearer {login1.data['access']}"
-        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {login1.data['access']}")
         response = api_client.post(
             CHANGE_URL,
             {
@@ -100,13 +98,9 @@ class TestPasswordChange:
 
         # Device 2's refresh must now fail
         api_client.credentials()  # clear
-        r2 = api_client.post(
-            "/api/auth/token/refresh/", {"refresh": refresh2}
-        )
+        r2 = api_client.post("/api/auth/token/refresh/", {"refresh": refresh2})
         assert r2.status_code == status.HTTP_401_UNAUTHORIZED
 
         # Device 1's refresh should still work
-        r1 = api_client.post(
-            "/api/auth/token/refresh/", {"refresh": refresh1}
-        )
+        r1 = api_client.post("/api/auth/token/refresh/", {"refresh": refresh1})
         assert r1.status_code == status.HTTP_200_OK

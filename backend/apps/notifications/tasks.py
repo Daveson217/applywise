@@ -25,9 +25,7 @@ def send_notification_email(self, notification_id: int):
     from .models import Notification
 
     try:
-        notification = Notification.objects.select_related("user").get(
-            pk=notification_id
-        )
+        notification = Notification.objects.select_related("user").get(pk=notification_id)
     except Notification.DoesNotExist:
         return
 
@@ -38,8 +36,7 @@ def send_notification_email(self, notification_id: int):
         posting = None
         if isinstance(posting_id, int):
             posting = (
-                JobPosting.objects
-                .select_related("company")
+                JobPosting.objects.select_related("company")
                 .filter(pk=posting_id, company__user=user)  # ownership check
                 .first()
             )
@@ -63,7 +60,5 @@ def send_notification_email(self, notification_id: int):
         )
 
     if not sent:
-        logger.warning(
-            f"Failed to send notification {notification_id} to {user.email}"
-        )
+        logger.warning(f"Failed to send notification {notification_id} to {user.email}")
         raise self.retry()

@@ -98,9 +98,7 @@ class Application(models.Model):
     company = models.CharField(max_length=255)
     role = models.CharField(max_length=255)
     job_type = models.CharField(max_length=20, choices=JOB_TYPE_CHOICES)
-    status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default="saved"
-    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="saved")
     applied_date = models.DateField(null=True, blank=True)
     deadline = models.DateField(null=True, blank=True)
     salary_min = models.IntegerField(null=True, blank=True)
@@ -111,9 +109,7 @@ class Application(models.Model):
     url = models.URLField(blank=True)
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, blank=True)
     notes = models.TextField(blank=True)
-    priority = models.CharField(
-        max_length=10, choices=PRIORITY_CHOICES, default="medium"
-    )
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default="medium")
     tags = models.ManyToManyField(Tag, blank=True, related_name="applications")
     cv_version = models.ForeignKey(
         CVVersion,

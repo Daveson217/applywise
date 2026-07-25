@@ -20,7 +20,12 @@ def _cache_key(url: str) -> str:
 
 def _clean_text(html: str) -> str:
     """Extract visible text from HTML, stripping nav/footer/scripts."""
-    text = re.sub(r"<(script|style|nav|footer|header)[^>]*>.*?</\1>", "", html, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(
+        r"<(script|style|nav|footer|header)[^>]*>.*?</\1>",
+        "",
+        html,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
     text = re.sub(r"<[^>]+>", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text[:10000]
@@ -62,9 +67,7 @@ async def fetch_job_description(url: str) -> str | None:
                 page = await context.new_page()
 
                 # Hard navigation timeout + total page lifetime cap
-                await page.goto(
-                    url, wait_until="domcontentloaded", timeout=15000
-                )
+                await page.goto(url, wait_until="domcontentloaded", timeout=15000)
                 await page.wait_for_timeout(2000)
 
                 html = await page.content()

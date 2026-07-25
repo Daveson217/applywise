@@ -45,9 +45,7 @@ class TestPasswordResetRequest:
     def test_nonexistent_email_returns_same_200(self, api_client):
         # No user enumeration — response must be indistinguishable
         with patch("apps.users.password_reset.send_email") as mock_send:
-            response = api_client.post(
-                REQUEST_URL, {"email": "ghost@nowhere.com"}
-            )
+            response = api_client.post(REQUEST_URL, {"email": "ghost@nowhere.com"})
         assert response.status_code == status.HTTP_200_OK
         assert "message" in response.data
         # No email was sent
@@ -67,9 +65,7 @@ class TestPasswordResetRequest:
 
     def test_email_case_normalized(self, api_client, user):
         with patch("apps.users.password_reset.send_email") as mock_send:
-            response = api_client.post(
-                REQUEST_URL, {"email": user.email.upper()}
-            )
+            response = api_client.post(REQUEST_URL, {"email": user.email.upper()})
         assert response.status_code == status.HTTP_200_OK
         mock_send.assert_called_once()
 
@@ -135,6 +131,7 @@ class TestPasswordResetConfirm:
         # Sign a token as if it were generated over an hour ago.
         # Django's TimestampSigner uses time.time() when signing/verifying.
         import time
+
         past = time.time() - RESET_TOKEN_TTL_SECONDS - 60
 
         with patch("time.time", return_value=past):
@@ -142,9 +139,7 @@ class TestPasswordResetConfirm:
 
         # Store its hash so single-use check doesn't cause the failure —
         # we want to prove expiry is what rejects it
-        user.password_reset_token_hash = hashlib.sha256(
-            old_token.encode()
-        ).hexdigest()
+        user.password_reset_token_hash = hashlib.sha256(old_token.encode()).hexdigest()
         user.save()
 
         response = api_client.post(
@@ -173,15 +168,11 @@ class TestPasswordResetConfirm:
 
     def test_weak_password_rejected(self, api_client, user):
         token = self._request_reset(api_client, user)
-        response = api_client.post(
-            CONFIRM_URL, {"token": token, "new_password": "short"}
-        )
+        response = api_client.post(CONFIRM_URL, {"token": token, "new_password": "short"})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_missing_token_rejected(self, api_client):
-        response = api_client.post(
-            CONFIRM_URL, {"new_password": "NewStrongPass!123"}
-        )
+        response = api_client.post(CONFIRM_URL, {"new_password": "NewStrongPass!123"})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_reset_blacklists_all_refresh_tokens(self, api_client, user):
@@ -200,9 +191,7 @@ class TestPasswordResetConfirm:
         )
 
         # Old refresh token no longer works
-        r = api_client.post(
-            "/api/auth/token/refresh/", {"refresh": refresh}, format="json"
-        )
+        r = api_client.post("/api/auth/token/refresh/", {"refresh": refresh}, format="json")
         assert r.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_reset_used_hash_gone_error(self, api_client, user):

@@ -50,12 +50,11 @@ def _detect_real_filetype(file_obj) -> str | None:
 
     if head.startswith(PDF_MAGIC):
         return "pdf"
-    if head.startswith(ZIP_MAGIC):
-        # Docx is a zip — look for the docx-specific entry name in the central
-        # directory. The first 2 KB of a docx almost always includes
-        # `word/document.xml` or `[Content_Types].xml`.
-        if b"word/" in head or b"[Content_Types]" in head:
-            return "docx"
+    # Docx is a zip — look for the docx-specific entry name in the central
+    # directory. The first 2 KB of a docx almost always includes
+    # `word/document.xml` or `[Content_Types].xml`.
+    if head.startswith(ZIP_MAGIC) and (b"word/" in head or b"[Content_Types]" in head):
+        return "docx"
     return None
 
 
@@ -69,9 +68,7 @@ class CVUploadSerializer(serializers.Serializer):
         if not value:
             raise serializers.ValidationError("Name cannot be empty.")
         if any(ord(c) < 32 for c in value):
-            raise serializers.ValidationError(
-                "Name contains invalid characters."
-            )
+            raise serializers.ValidationError("Name contains invalid characters.")
         return value
 
     def validate_file(self, value):
@@ -85,7 +82,5 @@ class CVUploadSerializer(serializers.Serializer):
         # Verify by content, not by client-supplied content_type
         real = _detect_real_filetype(value)
         if real not in ("pdf", "docx"):
-            raise serializers.ValidationError(
-                "Only PDF and DOCX files are supported."
-            )
+            raise serializers.ValidationError("Only PDF and DOCX files are supported.")
         return value

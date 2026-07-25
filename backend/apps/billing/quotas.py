@@ -18,12 +18,11 @@ Single function used by all views:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 
 from django.conf import settings
 from django.utils import timezone as django_timezone
 
-from .models import PLAN_LIMITS
 from .permissions import get_user_limits, get_user_plan
 
 
@@ -36,11 +35,12 @@ def payments_enabled() -> bool:
     return bool(getattr(settings, "PAYMENTS_ENABLED", False))
 
 
-def _unlocked_result(plan: str = "premium") -> "QuotaResult":
+def _unlocked_result(plan: str = "premium") -> QuotaResult:
     """Shape returned when PAYMENTS_ENABLED is False. All limits are None
     so the frontend renders 'unlimited' badges rather than confusing
     N/M progress bars."""
     return QuotaResult(allowed=True, plan=plan, limit=None, used=None)
+
 
 # Map AI feature name → PLAN_LIMITS key for monthly cap
 AI_FEATURE_LIMIT_KEYS = {
@@ -70,7 +70,7 @@ class QuotaResult:
 
 def _month_start_utc() -> datetime:
     """First-of-month at 00:00 UTC for the current calendar month."""
-    now = django_timezone.now().astimezone(timezone.utc)
+    now = django_timezone.now().astimezone(UTC)
     return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
@@ -108,8 +108,12 @@ def reserve_ai_quota(user, feature: str) -> QuotaResult:
     # when unbounded.
     if not payments_enabled():
         log = AIUsageLog.objects.create(
-            user=user, feature=feature, provider="pending",
-            model="pending", input_tokens=0, output_tokens=0,
+            user=user,
+            feature=feature,
+            provider="pending",
+            model="pending",
+            input_tokens=0,
+            output_tokens=0,
         )
         result = _unlocked_result()
         result.reservation_id = log.pk  # type: ignore[attr-defined]
@@ -130,8 +134,12 @@ def reserve_ai_quota(user, feature: str) -> QuotaResult:
         # soon as the transaction commits, so a parallel request entering
         # this block next will see the new count.
         log = AIUsageLog.objects.create(
-            user=user, feature=feature, provider="pending",
-            model="pending", input_tokens=0, output_tokens=0,
+            user=user,
+            feature=feature,
+            provider="pending",
+            model="pending",
+            input_tokens=0,
+            output_tokens=0,
         )
 
     result.used = (result.used or 0) + 1
@@ -140,8 +148,11 @@ def reserve_ai_quota(user, feature: str) -> QuotaResult:
 
 
 def finalize_ai_reservation(
-    reservation_id: int, provider: str, model: str,
-    input_tokens: int, output_tokens: int,
+    reservation_id: int,
+    provider: str,
+    model: str,
+    input_tokens: int,
+    output_tokens: int,
 ) -> None:
     """Update a reserved AIUsageLog row with real token counts. Idempotent."""
     from apps.ai.models import AIUsageLog
@@ -173,7 +184,6 @@ def reserve_resource_quota(user, resource_key: str, model_cls) -> QuotaResult:
             Application.objects.create(user=user, ...)
     """
     from django.contrib.auth import get_user_model
-    from django.db import transaction
 
     if not payments_enabled():
         return _unlocked_result()
@@ -323,7 +333,10 @@ def get_usage_summary(user) -> dict:
             "cv_versions": {"used": cv_count, "limit": _limit("max_cv_versions")},
         },
         "ai_monthly": {
-            "cover_letter": {"used": cover_letters_used, "limit": _limit("max_cover_letters_monthly")},
+            "cover_letter": {
+                "used": cover_letters_used,
+                "limit": _limit("max_cover_letters_monthly"),
+            },
             "qa": {"used": qa_used, "limit": _limit("max_qa_monthly")},
             "ats_score": {"used": ats_used, "limit": _limit("max_ats_scores_monthly")},
         },

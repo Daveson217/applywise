@@ -11,9 +11,7 @@ class ContactViewSet(viewsets.ModelViewSet):
     ordering = ["name"]
 
     def get_queryset(self):
-        return Contact.objects.filter(
-            user=self.request.user
-        ).prefetch_related("interactions")
+        return Contact.objects.filter(user=self.request.user).prefetch_related("interactions")
 
 
 class InteractionViewSet(viewsets.ModelViewSet):

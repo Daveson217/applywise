@@ -18,19 +18,26 @@ ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 
 # Refuse to start if SECRET_KEY is the documented example. Catches the
 # "deployed with .env.example values" footgun before the first request.
+# Skipped when DEBUG=True (local dev) or when running the test settings
+# module (CI uses a placeholder key that would otherwise fail this check).
 _FORBIDDEN_SECRETS = {
     "",
     "change-me-to-a-random-secret-key",
     "django-insecure-",  # any default django-startproject value
 }
-if not DEBUG and (
-    SECRET_KEY in _FORBIDDEN_SECRETS
-    or SECRET_KEY.startswith("django-insecure-")
-    or len(SECRET_KEY) < 50
+_IS_TEST_ENV = "test" in os.environ.get("DJANGO_SETTINGS_MODULE", "")
+if (
+    not DEBUG
+    and not _IS_TEST_ENV
+    and (
+        SECRET_KEY in _FORBIDDEN_SECRETS
+        or SECRET_KEY.startswith("django-insecure-")
+        or len(SECRET_KEY) < 50
+    )
 ):
     raise RuntimeError(
         "DJANGO_SECRET_KEY is missing, too short, or set to a known default. "
-        "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
+        'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(64))"'
     )
 
 INSTALLED_APPS = [
@@ -127,7 +134,10 @@ PASSWORD_HASHERS = [
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 8}},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 8},
+    },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
@@ -154,12 +164,12 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "20/min",       # public endpoints: registration, password reset
-        "user": "200/min",      # authenticated default
+        "anon": "20/min",  # public endpoints: registration, password reset
+        "user": "200/min",  # authenticated default
         "social_auth": "10/min",  # OAuth code-exchange (prevents code-replay scans)
-        "auth": "5/min",        # login attempts per IP
-        "ai": "30/min",         # AI generation calls per user (compute-heavy)
-        "ats_detect": "30/min", # URL probing — limits SSRF scanning attempts
+        "auth": "5/min",  # login attempts per IP
+        "ai": "30/min",  # AI generation calls per user (compute-heavy)
+        "ats_detect": "30/min",  # URL probing — limits SSRF scanning attempts
     },
 }
 
@@ -194,9 +204,7 @@ CELERY_BEAT_SCHEDULE = {
 
 # Email (Resend)
 RESEND_API_KEY = env("RESEND_API_KEY", default="")
-RESEND_FROM_EMAIL = env(
-    "RESEND_FROM_EMAIL", default="Applywise <no-reply@applywise.app>"
-)
+RESEND_FROM_EMAIL = env("RESEND_FROM_EMAIL", default="Applywise <no-reply@applywise.app>")
 DEFAULT_FROM_EMAIL = RESEND_FROM_EMAIL
 
 # Internationalization

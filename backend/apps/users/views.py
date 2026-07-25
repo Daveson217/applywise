@@ -1,3 +1,4 @@
+import contextlib
 import logging
 
 from django.contrib.auth import get_user_model
@@ -83,11 +84,10 @@ class LogoutView(generics.GenericAPIView):
                 {"error": "refresh token required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        try:
+        # Already blacklisted or malformed tokens are treated as success —
+        # the client's intent (log out) is satisfied either way.
+        with contextlib.suppress(TokenError):
             RefreshToken(refresh).blacklist()
-        except TokenError:
-            # Already blacklisted or malformed — treat as success
-            pass
         return Response(status=status.HTTP_205_RESET_CONTENT)
 
 
@@ -130,9 +130,7 @@ class PasswordChangeView(APIView):
     throttle_classes = [PasswordChangeThrottle]
 
     def post(self, request):
-        serializer = PasswordChangeSerializer(
-            data=request.data, context={"user": request.user}
-        )
+        serializer = PasswordChangeSerializer(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
 
         current = serializer.validated_data["current_password"]
@@ -160,7 +158,9 @@ class PasswordChangeView(APIView):
 
         # Kill any OTHER active sessions. Get the caller's own refresh
         # token from the request (if provided) so we can preserve it.
-        _blacklist_other_refresh_tokens(request.user, keep_refresh=request.data.get("current_refresh"))
+        _blacklist_other_refresh_tokens(
+            request.user, keep_refresh=request.data.get("current_refresh")
+        )
 
         logger.info(f"Password changed for user id={request.user.id}")
 

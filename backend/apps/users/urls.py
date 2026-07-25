@@ -12,9 +12,7 @@ urlpatterns = [
         views.ThrottledTokenObtainPairView.as_view(),
         name="token-obtain-pair",
     ),
-    path(
-        "auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"
-    ),
+    path("auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("auth/logout/", views.LogoutView.as_view(), name="logout"),
     path(
         "auth/password/change/",

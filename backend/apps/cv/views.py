@@ -22,9 +22,7 @@ class CVVersionViewSet(viewsets.ModelViewSet):
         from apps.billing.quotas import check_resource_quota
 
         current_count = CVVersion.objects.filter(user=request.user).count()
-        quota = check_resource_quota(
-            request.user, "max_cv_versions", current_count
-        )
+        quota = check_resource_quota(request.user, "max_cv_versions", current_count)
         if not quota.allowed:
             return Response(
                 {
@@ -87,8 +85,8 @@ class CVDownloadView(APIView):
     def get(self, request, pk):
         try:
             cv = CVVersion.objects.get(pk=pk, user=request.user)
-        except CVVersion.DoesNotExist:
-            raise Http404("CV not found")
+        except CVVersion.DoesNotExist as e:
+            raise Http404("CV not found") from e
 
         if not cv.file:
             raise Http404("File missing")

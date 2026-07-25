@@ -46,9 +46,7 @@ class TestSubscription:
 
 @pytest.mark.django_db
 class TestCheckout:
-    def test_checkout_valid_plan_returns_503_when_unconfigured(
-        self, authenticated_client
-    ):
+    def test_checkout_valid_plan_returns_503_when_unconfigured(self, authenticated_client):
         # No STRIPE_SECRET_KEY in tests → must refuse, not return a fake URL.
         # Previously this returned a placeholder which would have let users
         # think they were entering real Stripe checkout.

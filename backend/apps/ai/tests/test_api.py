@@ -62,9 +62,7 @@ class TestCoverLetterEndpoint:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_list_cover_letters(self, authenticated_client, user):
-        cv = CVVersion.objects.create(
-            user=user, name="CV", file="t.pdf", extracted_text="test"
-        )
+        cv = CVVersion.objects.create(user=user, name="CV", file="t.pdf", extracted_text="test")
         CoverLetter.objects.create(
             user=user,
             cv_version=cv,

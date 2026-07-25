@@ -1,14 +1,14 @@
 """Security tests covering the audit fixes:
 
-  - SSRF URL validation (cloud metadata, internal IPs, schemes)
-  - CSV formula injection (export)
-  - CSV import size + row caps
-  - CV magic-byte validation (vs trusted client content_type)
-  - CV download access control (no horizontal IDOR)
-  - Bulk action input validation
-  - OAuth redirect_uri allow-list + provider config gating
-  - Logout blacklists refresh tokens
-  - Quota race-safe reservation (concurrent simulation)
+- SSRF URL validation (cloud metadata, internal IPs, schemes)
+- CSV formula injection (export)
+- CSV import size + row caps
+- CV magic-byte validation (vs trusted client content_type)
+- CV download access control (no horizontal IDOR)
+- Bulk action input validation
+- OAuth redirect_uri allow-list + provider config gating
+- Logout blacklists refresh tokens
+- Quota race-safe reservation (concurrent simulation)
 """
 
 import io
@@ -42,14 +42,14 @@ class TestSSRFValidation:
             "http://127.0.0.1:8000",
             "http://0.0.0.0",
             "http://169.254.169.254/latest/meta-data/",  # AWS metadata
-            "http://10.0.0.1",                          # private
-            "http://192.168.1.1",                       # private
-            "http://172.16.0.1",                        # private
-            "http://[::1]/",                            # IPv6 loopback
-            "http://[::ffff:127.0.0.1]/",               # IPv4-mapped IPv6
-            "file:///etc/passwd",                       # wrong scheme
-            "gopher://internal/",                       # wrong scheme
-            "javascript:alert(1)",                      # wrong scheme
+            "http://10.0.0.1",  # private
+            "http://192.168.1.1",  # private
+            "http://172.16.0.1",  # private
+            "http://[::1]/",  # IPv6 loopback
+            "http://[::ffff:127.0.0.1]/",  # IPv4-mapped IPv6
+            "file:///etc/passwd",  # wrong scheme
+            "gopher://internal/",  # wrong scheme
+            "javascript:alert(1)",  # wrong scheme
         ],
     )
     def test_blocks_dangerous_url(self, url):
@@ -82,9 +82,7 @@ class TestSSRFValidation:
 # ─────────────────────────────────────────────────────────────────────────────
 @pytest.mark.django_db
 class TestCSVFormulaInjection:
-    def test_dangerous_cell_prefixed_with_quote(
-        self, authenticated_client, user
-    ):
+    def test_dangerous_cell_prefixed_with_quote(self, authenticated_client, user):
         Subscription.objects.create(user=user, plan="pro", status="active")
         # Attacker stores a payload in company name
         Application.objects.create(
@@ -93,12 +91,8 @@ class TestCSVFormulaInjection:
             role="Pwn",
             job_type="fulltime",
         )
-        response = authenticated_client.get(
-            "/api/applications/export/", {"type": "csv"}
-        )
-        assert response.status_code == 200, (
-            response.status_code, response.content[:300]
-        )
+        response = authenticated_client.get("/api/applications/export/", {"type": "csv"})
+        assert response.status_code == 200, (response.status_code, response.content[:300])
         body = response.content.decode()
         # The dangerous cell must NOT be exported as a formula.
         # It should be prefixed with a single quote.
@@ -114,10 +108,7 @@ class TestCSVFormulaInjection:
 @pytest.mark.django_db
 class TestCSVImportLimits:
     def test_import_rejects_too_many_rows(self, authenticated_client):
-        big_rows = [
-            {"company": f"C{i}", "role": "R", "job_type": "fulltime"}
-            for i in range(501)
-        ]
+        big_rows = [{"company": f"C{i}", "role": "R", "job_type": "fulltime"} for i in range(501)]
         response = authenticated_client.post(
             "/api/applications/import-csv/",
             {"commit": "true", "rows": json.dumps(big_rows)},
@@ -138,9 +129,7 @@ class TestCVMagicByteValidation:
             "/api/cv/",
             {
                 "name": "test",
-                "file": SimpleUploadedFile(
-                    "x.pdf", content, content_type=content_type
-                ),
+                "file": SimpleUploadedFile("x.pdf", content, content_type=content_type),
             },
             format="multipart",
         )
@@ -148,28 +137,23 @@ class TestCVMagicByteValidation:
     def test_blocks_html_disguised_as_pdf(self, authenticated_client):
         # Attacker claims content_type=application/pdf but sends HTML
         evil = b"<html><script>alert(1)</script></html>"
-        response = self._upload(
-            authenticated_client, evil, "application/pdf"
-        )
+        response = self._upload(authenticated_client, evil, "application/pdf")
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_blocks_executable_disguised_as_pdf(self, authenticated_client):
         # ELF binary header — clearly not a PDF
         evil = b"\x7fELF" + b"\x00" * 100
-        response = self._upload(
-            authenticated_client, evil, "application/pdf"
-        )
+        response = self._upload(authenticated_client, evil, "application/pdf")
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_accepts_real_pdf_magic(self, authenticated_client):
         # Minimal PDF header bytes
         real_pdf = b"%PDF-1.4\n%minimal pdf\n"
-        response = self._upload(
-            authenticated_client, real_pdf, "application/pdf"
-        )
+        response = self._upload(authenticated_client, real_pdf, "application/pdf")
         # 201 or 403 (over quota) both prove we passed magic-byte check
         assert response.status_code in (
-            status.HTTP_201_CREATED, status.HTTP_403_FORBIDDEN,
+            status.HTTP_201_CREATED,
+            status.HTTP_403_FORBIDDEN,
         )
 
     def test_blocks_empty_file(self, authenticated_client):
@@ -182,12 +166,8 @@ class TestCVMagicByteValidation:
 # ─────────────────────────────────────────────────────────────────────────────
 @pytest.mark.django_db
 class TestCVDownloadAuthorization:
-    def test_cannot_download_other_users_cv(
-        self, authenticated_client, user, other_user
-    ):
-        cv = CVVersion.objects.create(
-            user=other_user, name="Their CV", file="other.pdf"
-        )
+    def test_cannot_download_other_users_cv(self, authenticated_client, user, other_user):
+        cv = CVVersion.objects.create(user=other_user, name="Their CV", file="other.pdf")
         response = authenticated_client.get(f"/api/cv/{cv.pk}/download/")
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -206,9 +186,7 @@ class TestBulkActionValidation:
         assert response.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
 
     def test_invalid_status_rejected(self, authenticated_client, user):
-        app = Application.objects.create(
-            user=user, company="X", role="Y", job_type="fulltime"
-        )
+        app = Application.objects.create(user=user, company="X", role="Y", job_type="fulltime")
         response = authenticated_client.post(
             "/api/applications/bulk-action/",
             {
@@ -231,9 +209,7 @@ class TestBulkActionValidation:
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_bulk_only_acts_on_own_records(
-        self, authenticated_client, user, other_user
-    ):
+    def test_bulk_only_acts_on_own_records(self, authenticated_client, user, other_user):
         # Even if user passes other_user's app IDs, the user-scoped queryset
         # makes it a no-op rather than IDOR
         their_app = Application.objects.create(
@@ -297,9 +273,7 @@ class TestOAuthHardening:
             # First call: token exchange → returns access_token
             # Second call: userinfo → returns unverified email
             mock_requests.post.return_value.status_code = 200
-            mock_requests.post.return_value.json.return_value = {
-                "access_token": "fake"
-            }
+            mock_requests.post.return_value.json.return_value = {"access_token": "fake"}
             mock_requests.get.return_value.status_code = 200
             mock_requests.get.return_value.json.return_value = {
                 "email": "attacker@example.com",
@@ -341,9 +315,7 @@ class TestLogout:
         api_client.post("/api/auth/logout/", {"refresh": refresh}, format="json")
 
         # Refresh attempt should now fail
-        response = api_client.post(
-            "/api/auth/token/refresh/", {"refresh": refresh}, format="json"
-        )
+        response = api_client.post("/api/auth/token/refresh/", {"refresh": refresh}, format="json")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import PLAN_LIMITS, Subscription
+from .models import Subscription
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):

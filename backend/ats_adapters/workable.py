@@ -13,9 +13,7 @@ class WorkableAdapter(ATSAdapter):
         return bool(re.search(r"apply\.workable\.com", url, re.IGNORECASE))
 
     def extract_company_identifier(self, url: str) -> str:
-        match = re.search(
-            r"apply\.workable\.com/(\w[\w-]*)", url, re.IGNORECASE
-        )
+        match = re.search(r"apply\.workable\.com/(\w[\w-]*)", url, re.IGNORECASE)
         if match:
             return match.group(1)
         return ""

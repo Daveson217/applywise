@@ -27,15 +27,11 @@ class NotificationReadView(APIView):
 
 class NotificationMarkAllReadView(APIView):
     def post(self, request):
-        count = Notification.objects.filter(
-            user=request.user, is_read=False
-        ).update(is_read=True)
+        count = Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
         return Response({"marked": count})
 
 
 class UnreadCountView(APIView):
     def get(self, request):
-        count = Notification.objects.filter(
-            user=request.user, is_read=False
-        ).count()
+        count = Notification.objects.filter(user=request.user, is_read=False).count()
         return Response({"count": count})

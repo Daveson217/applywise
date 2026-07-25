@@ -1,8 +1,6 @@
-import asyncio
 import json
 
 from rest_framework import generics, status, viewsets
-from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -30,9 +28,9 @@ class WatchlistCompanyViewSet(viewsets.ModelViewSet):
     ordering = ["name"]
 
     def get_queryset(self):
-        return WatchlistCompany.objects.filter(
-            user=self.request.user
-        ).prefetch_related("rules", "postings")
+        return WatchlistCompany.objects.filter(user=self.request.user).prefetch_related(
+            "rules", "postings"
+        )
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -43,9 +41,7 @@ class WatchlistCompanyViewSet(viewsets.ModelViewSet):
         from apps.billing.quotas import check_resource_quota
 
         current_count = WatchlistCompany.objects.filter(user=request.user).count()
-        quota = check_resource_quota(
-            request.user, "max_watchlist", current_count
-        )
+        quota = check_resource_quota(request.user, "max_watchlist", current_count)
         if not quota.allowed:
             return Response(
                 {
@@ -69,9 +65,7 @@ class WatchlistCompanyViewSet(viewsets.ModelViewSet):
                 company.ats_company_slug = result[1]
                 company.save()
 
-        output_serializer = WatchlistCompanySerializer(
-            company, context={"request": request}
-        )
+        output_serializer = WatchlistCompanySerializer(company, context={"request": request})
         return Response(output_serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -85,9 +79,7 @@ class WatchlistRuleViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        company = WatchlistCompany.objects.get(
-            pk=self.kwargs["company_pk"], user=self.request.user
-        )
+        company = WatchlistCompany.objects.get(pk=self.kwargs["company_pk"], user=self.request.user)
         serializer.save(company=company)
 
 
@@ -109,12 +101,8 @@ class ATSDetectView(APIView):
 
         result = detect_ats_from_url(url)
         if result:
-            return Response(
-                {"detected": True, "provider": result[0], "slug": result[1]}
-            )
-        return Response(
-            {"detected": False, "provider": None, "slug": None}
-        )
+            return Response({"detected": True, "provider": result[0], "slug": result[1]})
+        return Response({"detected": False, "provider": None, "slug": None})
 
 
 # Header aliases we accept for the two watchlist columns. Users' CSVs are
@@ -189,8 +177,7 @@ class WatchlistImportView(APIView):
             return Response(
                 {
                     "error": (
-                        "No usable rows found. Ensure your file has a "
-                        "'name' or 'company' column."
+                        "No usable rows found. Ensure your file has a 'name' or 'company' column."
                     ),
                     "detected_headers": headers,
                 },
@@ -232,8 +219,9 @@ class WatchlistImportView(APIView):
         # Case-insensitive so "Stripe" and "stripe" collapse.
         existing = {
             n.lower()
-            for n in WatchlistCompany.objects.filter(user=request.user)
-            .values_list("name", flat=True)
+            for n in WatchlistCompany.objects.filter(user=request.user).values_list(
+                "name", flat=True
+            )
         }
 
         created = 0

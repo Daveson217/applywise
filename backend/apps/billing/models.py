@@ -24,7 +24,9 @@ PLAN_LIMITS = {
         "max_qa_monthly": 10,
         "max_ats_scores_monthly": 10,
         "monitoring_interval_hours": 24,
-        "allowed_providers": ["gemini",],
+        "allowed_providers": [
+            "gemini",
+        ],
         "allowed_models": ["gemini-2.5-flash"],
         "csv_export": False,
         "sms_notifications": False,
@@ -70,9 +72,7 @@ class Subscription(models.Model):
     stripe_customer_id = models.CharField(max_length=255, blank=True)
     stripe_subscription_id = models.CharField(max_length=255, blank=True)
     plan = models.CharField(max_length=10, choices=PLAN_CHOICES, default="free")
-    status = models.CharField(
-        max_length=20, choices=SUB_STATUS_CHOICES, default="active"
-    )
+    status = models.CharField(max_length=20, choices=SUB_STATUS_CHOICES, default="active")
     current_period_end = models.DateTimeField(null=True, blank=True)
     trial_end = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

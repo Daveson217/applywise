@@ -29,9 +29,7 @@ def render_template(template: str, context: dict, *, escape_html: bool = False) 
                 # URL fields: only allow http/https. If the value looks like
                 # anything else, replace with a safe placeholder.
                 lower = str_value.lower().strip()
-                if not (
-                    lower.startswith("http://") or lower.startswith("https://")
-                ):
+                if not (lower.startswith("http://") or lower.startswith("https://")):
                     str_value = "#"
                 # Escape any embedded quotes/brackets just in case
                 str_value = html.escape(str_value, quote=True)
@@ -117,9 +115,7 @@ def send_email(to: str, subject: str, html: str, text: str) -> bool:
         send_mail(
             subject=subject,
             message=text,
-            from_email=getattr(
-                settings, "DEFAULT_FROM_EMAIL", "no-reply@applywise.app"
-            ),
+            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@applywise.app"),
             recipient_list=[to],
             html_message=html,
             fail_silently=False,

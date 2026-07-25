@@ -1,0 +1,47 @@
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = [
+    "*/migrations/*",
+    ".venv",
+    "staticfiles",
+    "private_media",
+]
+
+[tool.ruff.lint]
+# Curated ruleset — catches real bugs without being pedantic. Deliberately
+# does NOT enable:
+#   - BLE (blind-except) — many places have legitimate defensive catches
+#     with a logging fallback; the intent is a safety net, not silencing
+#   - S (bandit) — too many false positives for Django patterns
+#     (0.0.0.0 binding, subprocess, hashlib usage, etc.)
+#   - D (docstrings) — not required for a working codebase
+#   - ANN (annotations everywhere) — nice to have, not blocking
+select = [
+    "E",     # pycodestyle errors
+    "F",     # pyflakes (real bugs — unused imports, undefined names)
+    "W",     # pycodestyle warnings
+    "I",     # isort (sorted imports)
+    "UP",    # pyupgrade (modern syntax)
+    "B",     # bugbear (mutable defaults, unused loop vars, etc.)
+    "SIM",   # flake8-simplify (redundant patterns)
+    "C4",    # comprehensions
+]
+ignore = [
+    "E501",   # line too long — formatter handles wrapping where sensible
+    "B008",   # function calls in default args — Django uses this pervasively
+    "SIM108", # ternary vs if/else — often less readable
+    "SIM117", # nested with statements — sometimes clearer than combined
+    "UP007",  # non-PEP604 unions — some 3rd-party libs still need Optional
+    "UP045",  # non-PEP604 optionals — same
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test files can have unused fixtures + long lines + magic numbers
+"**/tests/**" = ["F401", "F811", "E402"]
+"conftest.py" = ["F401", "F811"]
+# Settings files intentionally use star-imports
+"config/settings/*.py" = ["F403", "F405", "E402"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config", "ats_adapters", "llm_providers", "playwright_service"]

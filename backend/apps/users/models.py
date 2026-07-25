@@ -35,9 +35,7 @@ class User(AbstractUser):
     # token. We store the hash (not the token) so a DB leak doesn't let an
     # attacker mint valid resets. Field is cleared after successful reset,
     # enforcing single-use.
-    password_reset_token_hash = models.CharField(
-        max_length=64, blank=True, default=""
-    )
+    password_reset_token_hash = models.CharField(max_length=64, blank=True, default="")
     password_reset_requested_at = models.DateTimeField(null=True, blank=True)
 
     USERNAME_FIELD = "email"
@@ -67,9 +65,7 @@ class UserProfile(models.Model):
     bio = models.TextField(blank=True)
     weekly_goal = models.IntegerField(default=10)
     theme = models.CharField(max_length=10, choices=THEME_CHOICES, default="system")
-    accent_color = models.CharField(
-        max_length=10, choices=ACCENT_COLOR_CHOICES, default="blue"
-    )
+    accent_color = models.CharField(max_length=10, choices=ACCENT_COLOR_CHOICES, default="blue")
     default_llm_provider = models.CharField(
         max_length=20, choices=PROVIDER_CHOICES, default="gemini"
     )

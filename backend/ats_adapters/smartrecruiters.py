@@ -13,9 +13,7 @@ class SmartRecruitersAdapter(ATSAdapter):
         return bool(re.search(r"smartrecruiters\.com", url, re.IGNORECASE))
 
     def extract_company_identifier(self, url: str) -> str:
-        match = re.search(
-            r"smartrecruiters\.com/(\w[\w-]*)", url, re.IGNORECASE
-        )
+        match = re.search(r"smartrecruiters\.com/(\w[\w-]*)", url, re.IGNORECASE)
         if match:
             return match.group(1)
         return ""
@@ -37,7 +35,6 @@ class SmartRecruitersAdapter(ATSAdapter):
                     location += f", {loc['region']}"
 
             ref_url = job.get("ref", "")
-            apply_url = job.get("company", {}).get("identifier", "")
 
             jobs.append(
                 JobPostingData(

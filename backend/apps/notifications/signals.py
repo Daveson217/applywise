@@ -30,8 +30,6 @@ def trigger_email_send(sender, instance, created, **kwargs):
 
             send_notification_email.delay(instance.id)
         except Exception as e:
-            logger.error(
-                f"Failed to enqueue email for notification {instance.id}: {e}"
-            )
+            logger.error(f"Failed to enqueue email for notification {instance.id}: {e}")
 
     transaction.on_commit(_enqueue)

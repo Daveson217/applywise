@@ -11,12 +11,25 @@ from rest_framework.views import APIView
 
 from apps.applications.models import CVVersion
 from apps.billing.quotas import (
-    check_ai_quota,
     check_provider_allowed,
-    get_usage_summary,
     reserve_ai_quota,
 )
 from llm_providers.registry import PROVIDER_INFO
+
+from .models import AIUsageLog, CoverLetter
+from .serializers import (
+    ATSScoreRequestSerializer,
+    CoverLetterRequestSerializer,
+    CoverLetterSerializer,
+    FitScoreRequestSerializer,
+    QARequestSerializer,
+)
+from .tasks import (
+    compute_ats_score,
+    compute_fit_score,
+    generate_cover_letter,
+    generate_qa_answer,
+)
 
 # ─── SSE stream auth ─────────────────────────────────────────────────────
 # EventSource can't send Authorization headers, so the SSE endpoint can't
@@ -68,21 +81,6 @@ def _resolve_provider_model(request, data):
     model_name = data.get("model") or request.user.profile.default_llm_model
     return provider_name, model_name
 
-from .models import AIUsageLog, CoverLetter
-from .serializers import (
-    ATSScoreRequestSerializer,
-    CoverLetterRequestSerializer,
-    CoverLetterSerializer,
-    FitScoreRequestSerializer,
-    QARequestSerializer,
-)
-from .tasks import (
-    compute_ats_score,
-    compute_fit_score,
-    generate_cover_letter,
-    generate_qa_answer,
-)
-
 
 class ProvidersView(APIView):
     def get(self, request):
@@ -96,9 +94,7 @@ class CoverLetterView(APIView):
         data = serializer.validated_data
 
         try:
-            cv = CVVersion.objects.get(
-                pk=data["cv_version_id"], user=request.user
-            )
+            cv = CVVersion.objects.get(pk=data["cv_version_id"], user=request.user)
         except CVVersion.DoesNotExist:
             return Response(
                 {"error": "CV version not found"},
@@ -108,9 +104,7 @@ class CoverLetterView(APIView):
         provider_name, model_name = _resolve_provider_model(request, data)
 
         # Provider gating (cheap check first — no DB lock needed)
-        provider_check = check_provider_allowed(
-            request.user, provider_name, model_name
-        )
+        provider_check = check_provider_allowed(request.user, provider_name, model_name)
         if not provider_check.allowed:
             return _quota_error(provider_check)
 
@@ -162,9 +156,7 @@ class QAView(APIView):
         data = serializer.validated_data
 
         try:
-            cv = CVVersion.objects.get(
-                pk=data["cv_version_id"], user=request.user
-            )
+            cv = CVVersion.objects.get(pk=data["cv_version_id"], user=request.user)
         except CVVersion.DoesNotExist:
             return Response(
                 {"error": "CV version not found"},
@@ -173,9 +165,7 @@ class QAView(APIView):
 
         provider_name, model_name = _resolve_provider_model(request, data)
 
-        provider_check = check_provider_allowed(
-            request.user, provider_name, model_name
-        )
+        provider_check = check_provider_allowed(request.user, provider_name, model_name)
         if not provider_check.allowed:
             return _quota_error(provider_check)
 
@@ -211,9 +201,7 @@ class FitScoreView(APIView):
         data = serializer.validated_data
 
         try:
-            cv = CVVersion.objects.get(
-                pk=data["cv_version_id"], user=request.user
-            )
+            cv = CVVersion.objects.get(pk=data["cv_version_id"], user=request.user)
         except CVVersion.DoesNotExist:
             return Response(
                 {"error": "CV version not found"},
@@ -223,9 +211,7 @@ class FitScoreView(APIView):
         provider_name, model_name = _resolve_provider_model(request, data)
 
         # Fit score has no monthly cap per spec — only provider gating
-        provider_check = check_provider_allowed(
-            request.user, provider_name, model_name
-        )
+        provider_check = check_provider_allowed(request.user, provider_name, model_name)
         if not provider_check.allowed:
             return _quota_error(provider_check)
 
@@ -252,9 +238,7 @@ class ATSScoreView(APIView):
         data = serializer.validated_data
 
         try:
-            cv = CVVersion.objects.get(
-                pk=data["cv_version_id"], user=request.user
-            )
+            cv = CVVersion.objects.get(pk=data["cv_version_id"], user=request.user)
         except CVVersion.DoesNotExist:
             return Response(
                 {"error": "CV version not found"},
@@ -263,9 +247,7 @@ class ATSScoreView(APIView):
 
         provider_name, model_name = _resolve_provider_model(request, data)
 
-        provider_check = check_provider_allowed(
-            request.user, provider_name, model_name
-        )
+        provider_check = check_provider_allowed(request.user, provider_name, model_name)
         if not provider_check.allowed:
             return _quota_error(provider_check)
 

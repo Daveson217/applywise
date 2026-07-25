@@ -50,9 +50,7 @@ class SocialAuthSerializer(serializers.Serializer):
 
     def validate_redirect_uri(self, value):
         if value not in _allowed_redirect_uris():
-            raise serializers.ValidationError(
-                "redirect_uri not in allow-list"
-            )
+            raise serializers.ValidationError("redirect_uri not in allow-list")
         return value
 
 
@@ -113,9 +111,7 @@ class GoogleAuthView(APIView):
 
         if token_resp.status_code != 200:
             # Don't leak Google's specific error to the client
-            logger.info(
-                "Google token exchange failed: %s", token_resp.status_code
-            )
+            logger.info("Google token exchange failed: %s", token_resp.status_code)
             return Response(
                 {"error": "Authentication failed"},
                 status=status.HTTP_400_BAD_REQUEST,

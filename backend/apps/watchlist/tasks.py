@@ -56,9 +56,9 @@ def monitor_company(self, company_id: int):
             if created:
                 _check_rules(posting, company)
 
-        stale = JobPosting.objects.filter(
-            company=company, is_active=True
-        ).exclude(external_id__in=seen_ids)
+        stale = JobPosting.objects.filter(company=company, is_active=True).exclude(
+            external_id__in=seen_ids
+        )
         stale.update(is_active=False)
 
         company.last_checked_at = timezone.now()
@@ -67,10 +67,7 @@ def monitor_company(self, company_id: int):
         company.scrape_status = "active"
         company.save()
 
-        logger.info(
-            f"Monitored {company.name}: {len(jobs)} jobs found, "
-            f"{len(seen_ids)} active"
-        )
+        logger.info(f"Monitored {company.name}: {len(jobs)} jobs found, {len(seen_ids)} active")
 
     except Exception as exc:
         company.consecutive_failures += 1
@@ -79,7 +76,7 @@ def monitor_company(self, company_id: int):
             company.scrape_status = "error"
         company.save()
         logger.error(f"Failed to monitor {company.name}: {exc}")
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 def _check_rules(posting, company):
@@ -94,9 +91,7 @@ def _check_rules(posting, company):
         title_lower = posting.title.lower()
         location_lower = posting.location.lower()
 
-        keyword_match = not rule.keywords or any(
-            kw.lower() in title_lower for kw in rule.keywords
-        )
+        keyword_match = not rule.keywords or any(kw.lower() in title_lower for kw in rule.keywords)
         location_match = not rule.locations or any(
             loc.lower() in location_lower for loc in rule.locations
         )

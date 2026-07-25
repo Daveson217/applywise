@@ -5,7 +5,6 @@ from rest_framework.views import APIView
 from .models import PLAN_LIMITS, Subscription
 from .serializers import SubscriptionSerializer
 
-
 PLANS_INFO = [
     {
         "name": "free",
@@ -78,9 +77,7 @@ class CheckoutView(APIView):
 
         plan = request.data.get("plan")
         if plan not in ("pro", "premium"):
-            return Response(
-                {"error": "Invalid plan"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Invalid plan"}, status=status.HTTP_400_BAD_REQUEST)
 
         stripe_key = getattr(settings, "STRIPE_SECRET_KEY", "")
         if not stripe_key:

@@ -18,9 +18,7 @@ class GreenhouseAdapter(ATSAdapter):
         return any(re.search(p, url, re.IGNORECASE) for p in patterns)
 
     def extract_company_identifier(self, url: str) -> str:
-        match = re.search(
-            r"boards\.greenhouse\.io/(\w+)", url, re.IGNORECASE
-        )
+        match = re.search(r"boards\.greenhouse\.io/(\w+)", url, re.IGNORECASE)
         if match:
             return match.group(1)
         match = re.search(r"greenhouse\.io/(?:embed/)?(\w+)", url, re.IGNORECASE)

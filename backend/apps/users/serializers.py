@@ -36,18 +36,14 @@ class UserProfileSerializer(serializers.ModelSerializer):
         if not isinstance(value, list):
             raise serializers.ValidationError("Must be a list of strings.")
         if len(value) > max_items:
-            raise serializers.ValidationError(
-                f"At most {max_items} items allowed."
-            )
+            raise serializers.ValidationError(f"At most {max_items} items allowed.")
         result = []
         for item in value:
             if not isinstance(item, str):
                 raise serializers.ValidationError("Items must be strings.")
             item = item.strip()
             if len(item) > max_item_length:
-                raise serializers.ValidationError(
-                    f"Each item must be ≤ {max_item_length} chars."
-                )
+                raise serializers.ValidationError(f"Each item must be ≤ {max_item_length} chars.")
             if item:
                 result.append(item)
         return result
@@ -135,9 +131,7 @@ class RegisterSerializer(serializers.Serializer):
 
     def validate(self, data):
         if data["password"] != data["password_confirm"]:
-            raise serializers.ValidationError(
-                {"password_confirm": "Passwords do not match."}
-            )
+            raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
         return data
 
     def create(self, validated_data):

@@ -1,5 +1,3 @@
-import pytest
-
 from ats_adapters.ashby import AshbyAdapter
 from ats_adapters.greenhouse import GreenhouseAdapter
 from ats_adapters.lever import LeverAdapter
@@ -20,16 +18,9 @@ class TestGreenhouseAdapter:
 
     def test_extract_slug(self):
         adapter = GreenhouseAdapter()
+        assert adapter.extract_company_identifier("https://boards.greenhouse.io/stripe") == "stripe"
         assert (
-            adapter.extract_company_identifier(
-                "https://boards.greenhouse.io/stripe"
-            )
-            == "stripe"
-        )
-        assert (
-            adapter.extract_company_identifier(
-                "https://boards.greenhouse.io/anthropic/jobs/123"
-            )
+            adapter.extract_company_identifier("https://boards.greenhouse.io/anthropic/jobs/123")
             == "anthropic"
         )
 
@@ -42,10 +33,7 @@ class TestLeverAdapter:
 
     def test_extract_slug(self):
         adapter = LeverAdapter()
-        assert (
-            adapter.extract_company_identifier("https://jobs.lever.co/netflix")
-            == "netflix"
-        )
+        assert adapter.extract_company_identifier("https://jobs.lever.co/netflix") == "netflix"
 
 
 class TestAshbyAdapter:
@@ -56,12 +44,7 @@ class TestAshbyAdapter:
 
     def test_extract_slug(self):
         adapter = AshbyAdapter()
-        assert (
-            adapter.extract_company_identifier(
-                "https://jobs.ashbyhq.com/linear"
-            )
-            == "linear"
-        )
+        assert adapter.extract_company_identifier("https://jobs.ashbyhq.com/linear") == "linear"
 
 
 class TestWorkableAdapter:
@@ -73,9 +56,7 @@ class TestWorkableAdapter:
     def test_extract_slug(self):
         adapter = WorkableAdapter()
         assert (
-            adapter.extract_company_identifier(
-                "https://apply.workable.com/company-x"
-            )
+            adapter.extract_company_identifier("https://apply.workable.com/company-x")
             == "company-x"
         )
 

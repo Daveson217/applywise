@@ -89,18 +89,14 @@ def generate_cover_letter(
         # Try streaming first; fall back to single generate() if it fails
         try:
             full_text = asyncio.run(
-                _stream_and_collect(
-                    provider, prompt, COVER_LETTER_SYSTEM, task_id
-                )
+                _stream_and_collect(provider, prompt, COVER_LETTER_SYSTEM, task_id)
             )
             input_tokens = provider.estimate_tokens(prompt + COVER_LETTER_SYSTEM)
             output_tokens = provider.estimate_tokens(full_text)
             model_used = provider.model
             provider_used = provider.name
         except Exception:
-            response = asyncio.run(
-                provider.generate(prompt, {"system": COVER_LETTER_SYSTEM})
-            )
+            response = asyncio.run(provider.generate(prompt, {"system": COVER_LETTER_SYSTEM}))
             full_text = response.text
             input_tokens = response.input_tokens
             output_tokens = response.output_tokens
@@ -128,14 +124,20 @@ def generate_cover_letter(
         # reservation was made (e.g. internal/batch calls).
         if reservation_id:
             finalize_ai_reservation(
-                reservation_id, provider_used, model_used,
-                input_tokens, output_tokens,
+                reservation_id,
+                provider_used,
+                model_used,
+                input_tokens,
+                output_tokens,
             )
         else:
             AIUsageLog.objects.create(
-                user_id=user_id, feature="cover_letter",
-                provider=provider_used, model=model_used,
-                input_tokens=input_tokens, output_tokens=output_tokens,
+                user_id=user_id,
+                feature="cover_letter",
+                provider=provider_used,
+                model=model_used,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
             )
 
         return {"cover_letter_id": cover_letter.id, "content": full_text}
@@ -145,7 +147,7 @@ def generate_cover_letter(
         if reservation_id:
             release_ai_reservation(reservation_id)
         logger.error(f"Cover letter generation failed: {exc}")
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @shared_task(bind=True, max_retries=2)
@@ -169,9 +171,7 @@ def generate_qa_answer(
         provider = get_llm_provider(provider_name, model_name)
 
         char_limit_text = (
-            f"\n**Character limit:** {character_limit} characters"
-            if character_limit
-            else ""
+            f"\n**Character limit:** {character_limit} characters" if character_limit else ""
         )
 
         prompt = QA_PROMPT.format(
@@ -181,19 +181,22 @@ def generate_qa_answer(
             character_limit=char_limit_text,
         )
 
-        response = asyncio.run(
-            provider.generate(prompt, {"system": QA_SYSTEM})
-        )
+        response = asyncio.run(provider.generate(prompt, {"system": QA_SYSTEM}))
 
         if reservation_id:
             finalize_ai_reservation(
-                reservation_id, response.provider, response.model,
-                response.input_tokens, response.output_tokens,
+                reservation_id,
+                response.provider,
+                response.model,
+                response.input_tokens,
+                response.output_tokens,
             )
         else:
             AIUsageLog.objects.create(
-                user_id=user_id, feature="qa",
-                provider=response.provider, model=response.model,
+                user_id=user_id,
+                feature="qa",
+                provider=response.provider,
+                model=response.model,
                 input_tokens=response.input_tokens,
                 output_tokens=response.output_tokens,
             )
@@ -204,7 +207,7 @@ def generate_qa_answer(
         if reservation_id:
             release_ai_reservation(reservation_id)
         logger.error(f"QA generation failed: {exc}")
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @shared_task(bind=True, max_retries=2)
@@ -228,9 +231,7 @@ def compute_fit_score(
             cv_text=cv_text,
         )
 
-        response = asyncio.run(
-            provider.generate(prompt, {"system": FIT_SCORE_SYSTEM})
-        )
+        response = asyncio.run(provider.generate(prompt, {"system": FIT_SCORE_SYSTEM}))
 
         AIUsageLog.objects.create(
             user_id=user_id,
@@ -250,7 +251,7 @@ def compute_fit_score(
 
     except Exception as exc:
         logger.error(f"Fit score computation failed: {exc}")
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 @shared_task(bind=True, max_retries=2)
@@ -276,19 +277,22 @@ def compute_ats_score(
             cv_text=cv_text,
         )
 
-        response = asyncio.run(
-            provider.generate(prompt, {"system": ATS_SCORE_SYSTEM})
-        )
+        response = asyncio.run(provider.generate(prompt, {"system": ATS_SCORE_SYSTEM}))
 
         if reservation_id:
             finalize_ai_reservation(
-                reservation_id, response.provider, response.model,
-                response.input_tokens, response.output_tokens,
+                reservation_id,
+                response.provider,
+                response.model,
+                response.input_tokens,
+                response.output_tokens,
             )
         else:
             AIUsageLog.objects.create(
-                user_id=user_id, feature="ats_score",
-                provider=response.provider, model=response.model,
+                user_id=user_id,
+                feature="ats_score",
+                provider=response.provider,
+                model=response.model,
                 input_tokens=response.input_tokens,
                 output_tokens=response.output_tokens,
             )
@@ -304,4 +308,4 @@ def compute_ats_score(
         if reservation_id:
             release_ai_reservation(reservation_id)
         logger.error(f"ATS score computation failed: {exc}")
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc

@@ -32,9 +32,7 @@ class TestWatchlistCRUD:
         assert response.data["ats_provider"] == ""
 
     def test_delete_company(self, authenticated_client, user):
-        company = WatchlistCompany.objects.create(
-            user=user, name="Test", ats_provider="greenhouse"
-        )
+        company = WatchlistCompany.objects.create(user=user, name="Test", ats_provider="greenhouse")
         response = authenticated_client.delete(f"{WATCHLIST_URL}{company.pk}/")
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
@@ -58,9 +56,7 @@ class TestATSDetection:
         assert response.data["slug"] == "stripe"
 
     def test_detect_unknown(self, authenticated_client):
-        response = authenticated_client.post(
-            DETECT_URL, {"url": "https://careers.randomcorp.com"}
-        )
+        response = authenticated_client.post(DETECT_URL, {"url": "https://careers.randomcorp.com"})
         assert response.status_code == status.HTTP_200_OK
         assert response.data["detected"] is False
 
@@ -79,9 +75,7 @@ class TestWatchlistRules:
 
     def test_list_rules(self, authenticated_client, user):
         company = WatchlistCompany.objects.create(user=user, name="Stripe")
-        WatchlistRule.objects.create(
-            company=company, keywords=["intern"], is_active=True
-        )
+        WatchlistRule.objects.create(company=company, keywords=["intern"], is_active=True)
         response = authenticated_client.get(f"{WATCHLIST_URL}{company.pk}/rules/")
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) >= 1
@@ -97,8 +91,6 @@ class TestWatchlistPostings:
             title="SWE Intern",
             url="https://boards.greenhouse.io/stripe/jobs/123",
         )
-        response = authenticated_client.get(
-            f"{WATCHLIST_URL}{company.pk}/postings/"
-        )
+        response = authenticated_client.get(f"{WATCHLIST_URL}{company.pk}/postings/")
         assert response.status_code == status.HTTP_200_OK
         assert response.data["count"] == 1

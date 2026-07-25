@@ -11,5 +11,13 @@ class CoverLetterAdmin(admin.ModelAdmin):
 
 @admin.register(AIUsageLog)
 class AIUsageLogAdmin(admin.ModelAdmin):
-    list_display = ["user", "feature", "provider", "model", "input_tokens", "output_tokens", "timestamp"]
+    list_display = [
+        "user",
+        "feature",
+        "provider",
+        "model",
+        "input_tokens",
+        "output_tokens",
+        "timestamp",
+    ]
     list_filter = ["feature", "provider"]

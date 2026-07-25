@@ -46,9 +46,7 @@ class CoverLetterRequestSerializer(serializers.Serializer):
 
     def validate(self, data):
         if not data.get("job_url") and not data.get("job_description"):
-            raise serializers.ValidationError(
-                "Either job_url or job_description is required."
-            )
+            raise serializers.ValidationError("Either job_url or job_description is required.")
         return data
 
 
@@ -72,9 +70,7 @@ class FitScoreRequestSerializer(serializers.Serializer):
 
     def validate(self, data):
         if not data.get("job_url") and not data.get("job_description"):
-            raise serializers.ValidationError(
-                "Either job_url or job_description is required."
-            )
+            raise serializers.ValidationError("Either job_url or job_description is required.")
         return data
 
 
@@ -88,4 +84,12 @@ class ATSScoreRequestSerializer(serializers.Serializer):
 class AIUsageLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = AIUsageLog
-        fields = ["id", "feature", "provider", "model", "input_tokens", "output_tokens", "timestamp"]
+        fields = [
+            "id",
+            "feature",
+            "provider",
+            "model",
+            "input_tokens",
+            "output_tokens",
+            "timestamp",
+        ]

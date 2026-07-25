@@ -54,8 +54,12 @@ class TestQuotaBypassWhenDisabled:
         # Even with 999 prior generations, free-tier cap of 5 doesn't apply
         for _ in range(999):
             AIUsageLog.objects.create(
-                user=user, feature="cover_letter", provider="gemini",
-                model="gemini-2.5-flash", input_tokens=1, output_tokens=1,
+                user=user,
+                feature="cover_letter",
+                provider="gemini",
+                model="gemini-2.5-flash",
+                input_tokens=1,
+                output_tokens=1,
             )
         result = check_ai_quota(user, "cover_letter")
         assert result.allowed is True
@@ -118,12 +122,14 @@ class TestUsageSummaryShape:
     @override_settings(PAYMENTS_ENABLED=False)
     def test_summary_still_counts_actual_usage(self, user):
         # Even in beta mode, `used` reflects reality — admins need this
-        Application.objects.create(
-            user=user, company="X", role="Y", job_type="fulltime"
-        )
+        Application.objects.create(user=user, company="X", role="Y", job_type="fulltime")
         AIUsageLog.objects.create(
-            user=user, feature="cover_letter", provider="gemini",
-            model="gemini-2.5-flash", input_tokens=10, output_tokens=10,
+            user=user,
+            feature="cover_letter",
+            provider="gemini",
+            model="gemini-2.5-flash",
+            input_tokens=10,
+            output_tokens=10,
         )
         summary = get_usage_summary(user)
         assert summary["resources"]["applications"]["used"] == 1
@@ -140,9 +146,7 @@ class TestAPIEndpointsWhenDisabled:
     @override_settings(PAYMENTS_ENABLED=False)
     def test_create_26th_application_allowed(self, authenticated_client, user):
         for i in range(25):
-            Application.objects.create(
-                user=user, company=f"C{i}", role="R", job_type="fulltime"
-            )
+            Application.objects.create(user=user, company=f"C{i}", role="R", job_type="fulltime")
         # Free tier hard limit is 25 — this would normally 403
         response = authenticated_client.post(
             "/api/applications/",
@@ -155,22 +159,16 @@ class TestAPIEndpointsWhenDisabled:
     def test_create_6th_watchlist_allowed(self, authenticated_client, user):
         for i in range(5):
             WatchlistCompany.objects.create(user=user, name=f"C{i}")
-        response = authenticated_client.post(
-            "/api/watchlist/", {"name": "6th"}, format="json"
-        )
+        response = authenticated_client.post("/api/watchlist/", {"name": "6th"}, format="json")
         assert response.status_code == status.HTTP_201_CREATED
 
     @override_settings(PAYMENTS_ENABLED=False)
-    def test_cover_letter_openai_allowed_for_free_user(
-        self, authenticated_client, user
-    ):
+    def test_cover_letter_openai_allowed_for_free_user(self, authenticated_client, user):
         # Free user picking OpenAI is normally 403 (provider gating).
         # We mock .delay so the eager Celery task doesn't call real OpenAI.
         from unittest.mock import patch
 
-        cv = CVVersion.objects.create(
-            user=user, name="CV", file="cv.pdf", extracted_text="skills"
-        )
+        cv = CVVersion.objects.create(user=user, name="CV", file="cv.pdf", extracted_text="skills")
         with patch("apps.ai.views.generate_cover_letter") as mock_task:
             mock_task.delay.return_value.id = "fake-task-id"
             response = authenticated_client.post(
@@ -190,13 +188,9 @@ class TestAPIEndpointsWhenDisabled:
         assert response.status_code == status.HTTP_202_ACCEPTED
 
     @override_settings(PAYMENTS_ENABLED=False)
-    def test_csv_export_allowed_for_free_user(
-        self, authenticated_client, user
-    ):
+    def test_csv_export_allowed_for_free_user(self, authenticated_client, user):
         # Normally requires Pro+ subscription
-        response = authenticated_client.get(
-            "/api/applications/export/", {"type": "csv"}
-        )
+        response = authenticated_client.get("/api/applications/export/", {"type": "csv"})
         assert response.status_code == status.HTTP_200_OK
 
     @override_settings(PAYMENTS_ENABLED=False)
@@ -210,13 +204,9 @@ class TestAPIEndpointsWhenDisabled:
 @pytest.mark.django_db
 class TestPaymentsEnabledRestoresEnforcement:
     @override_settings(PAYMENTS_ENABLED=True)
-    def test_when_enabled_free_tier_cap_enforced(
-        self, authenticated_client, user
-    ):
+    def test_when_enabled_free_tier_cap_enforced(self, authenticated_client, user):
         for i in range(25):
-            Application.objects.create(
-                user=user, company=f"C{i}", role="R", job_type="fulltime"
-            )
+            Application.objects.create(user=user, company=f"C{i}", role="R", job_type="fulltime")
         response = authenticated_client.post(
             "/api/applications/",
             {"company": "26th", "role": "R", "job_type": "fulltime"},
@@ -225,14 +215,10 @@ class TestPaymentsEnabledRestoresEnforcement:
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     @override_settings(PAYMENTS_ENABLED=True)
-    def test_when_enabled_pro_user_bypasses_cap(
-        self, authenticated_client, user
-    ):
+    def test_when_enabled_pro_user_bypasses_cap(self, authenticated_client, user):
         Subscription.objects.create(user=user, plan="pro", status="active")
         for i in range(25):
-            Application.objects.create(
-                user=user, company=f"C{i}", role="R", job_type="fulltime"
-            )
+            Application.objects.create(user=user, company=f"C{i}", role="R", job_type="fulltime")
         response = authenticated_client.post(
             "/api/applications/",
             {"company": "26th", "role": "R", "job_type": "fulltime"},

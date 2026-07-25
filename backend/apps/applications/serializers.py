@@ -124,17 +124,12 @@ class ApplicationCreateUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
     def validate(self, data):
-        salary_min = data.get("salary_min") or (
-            self.instance.salary_min if self.instance else None
-        )
-        salary_max = data.get("salary_max") or (
-            self.instance.salary_max if self.instance else None
-        )
-        if salary_min is not None and salary_max is not None:
-            if salary_min > salary_max:
-                raise serializers.ValidationError(
-                    {"salary_min": "Minimum salary cannot exceed maximum salary."}
-                )
+        salary_min = data.get("salary_min") or (self.instance.salary_min if self.instance else None)
+        salary_max = data.get("salary_max") or (self.instance.salary_max if self.instance else None)
+        if salary_min is not None and salary_max is not None and salary_min > salary_max:
+            raise serializers.ValidationError(
+                {"salary_min": "Minimum salary cannot exceed maximum salary."}
+            )
         return data
 
     def create(self, validated_data):
@@ -142,13 +137,9 @@ class ApplicationCreateUpdateSerializer(serializers.ModelSerializer):
         validated_data["user"] = self.context["request"].user
         application = Application.objects.create(**validated_data)
         if tag_ids:
-            tags = Tag.objects.filter(
-                id__in=tag_ids, user=self.context["request"].user
-            )
+            tags = Tag.objects.filter(id__in=tag_ids, user=self.context["request"].user)
             application.tags.set(tags)
-        ApplicationActivity.objects.create(
-            application=application, event_type="created"
-        )
+        ApplicationActivity.objects.create(application=application, event_type="created")
         return application
 
     def update(self, instance, validated_data):
@@ -157,8 +148,6 @@ class ApplicationCreateUpdateSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         if tag_ids is not None:
-            tags = Tag.objects.filter(
-                id__in=tag_ids, user=self.context["request"].user
-            )
+            tags = Tag.objects.filter(id__in=tag_ids, user=self.context["request"].user)
             instance.tags.set(tags)
         return instance

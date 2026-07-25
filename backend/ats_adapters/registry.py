@@ -95,6 +95,7 @@ async def detect_ats_from_page(url: str) -> tuple[str, str] | None:
                 if next_url.startswith("/"):
                     # relative — safe, same host
                     from urllib.parse import urljoin
+
                     next_url = urljoin(str(response.url), next_url)
                 try:
                     validate_external_url(next_url)
@@ -120,9 +121,7 @@ async def detect_ats_from_page(url: str) -> tuple[str, str] | None:
                         if not slug:
                             match = re.search(pattern, html, re.IGNORECASE)
                             if match:
-                                slug = adapter.extract_company_identifier(
-                                    match.group(0)
-                                )
+                                slug = adapter.extract_company_identifier(match.group(0))
                         if slug:
                             return provider, slug
 

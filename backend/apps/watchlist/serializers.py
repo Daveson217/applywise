@@ -16,9 +16,7 @@ class WatchlistRuleSerializer(serializers.ModelSerializer):
         if not isinstance(value, list):
             raise serializers.ValidationError("Must be a list of strings.")
         if len(value) > max_items:
-            raise serializers.ValidationError(
-                f"At most {max_items} items allowed."
-            )
+            raise serializers.ValidationError(f"At most {max_items} items allowed.")
         cleaned = []
         for item in value:
             if not isinstance(item, str):
@@ -123,7 +121,7 @@ class WatchlistCompanyCreateSerializer(serializers.Serializer):
         try:
             validate_external_url(value)
         except URLValidationError as e:
-            raise serializers.ValidationError(str(e))
+            raise serializers.ValidationError(str(e)) from e
         return value
 
     def create(self, validated_data):
@@ -144,5 +142,5 @@ class ATSDetectSerializer(serializers.Serializer):
         try:
             validate_external_url(value)
         except URLValidationError as e:
-            raise serializers.ValidationError(str(e))
+            raise serializers.ValidationError(str(e)) from e
         return value

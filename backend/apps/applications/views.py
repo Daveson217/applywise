@@ -53,9 +53,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         from apps.billing.quotas import check_resource_quota
 
         current_count = Application.objects.filter(user=request.user).count()
-        quota = check_resource_quota(
-            request.user, "max_applications", current_count
-        )
+        quota = check_resource_quota(request.user, "max_applications", current_count)
         if not quota.allowed:
             return Response(
                 {
@@ -99,7 +97,10 @@ class BulkActionView(APIView):
     # Whitelist of valid status values — defense in depth even though the
     # model's choices validator would catch this on save.
     _VALID_STATUSES = {
-        s for s, _ in __import__("apps.applications.models", fromlist=["STATUS_CHOICES"]).STATUS_CHOICES
+        s
+        for s, _ in __import__(
+            "apps.applications.models", fromlist=["STATUS_CHOICES"]
+        ).STATUS_CHOICES
     }
 
     def post(self, request):
@@ -209,12 +210,7 @@ class ImportCSVView(APIView):
                 )
             if len(rows) > self.MAX_COMMIT_ROWS:
                 return Response(
-                    {
-                        "error": (
-                            f"Cannot import more than {self.MAX_COMMIT_ROWS} "
-                            f"rows at once"
-                        )
-                    },
+                    {"error": (f"Cannot import more than {self.MAX_COMMIT_ROWS} rows at once")},
                     status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 )
 
@@ -224,11 +220,7 @@ class ImportCSVView(APIView):
             skipped_over_limit = 0
 
             for row in rows:
-                cleaned = {
-                    k: v
-                    for k, v in row.items()
-                    if k in CSV_HEADERS and v not in (None, "")
-                }
+                cleaned = {k: v for k, v in row.items() if k in CSV_HEADERS and v not in (None, "")}
                 if not cleaned.get("company") or not cleaned.get("role"):
                     continue
                 cleaned.setdefault("job_type", "fulltime")
@@ -249,9 +241,7 @@ class ImportCSVView(APIView):
 
                 # Enforce per-row so a CSV can't blow past the cap
                 current = Application.objects.filter(user=request.user).count()
-                quota = check_resource_quota(
-                    request.user, "max_applications", current
-                )
+                quota = check_resource_quota(request.user, "max_applications", current)
                 if not quota.allowed:
                     skipped_over_limit = len(rows) - created
                     break
@@ -339,9 +329,7 @@ class ExportView(APIView):
         # Use `type` rather than `format` because DRF reserves `format` for
         # renderer negotiation and would 404 on unknown values.
         fmt = (
-            request.query_params.get("type")
-            or request.query_params.get("export")
-            or "csv"
+            request.query_params.get("type") or request.query_params.get("export") or "csv"
         ).lower()
         apps_qs = Application.objects.filter(user=request.user)
 
@@ -372,9 +360,7 @@ class ExportView(APIView):
                 json.dumps(data, default=str, indent=2),
                 content_type="application/json",
             )
-            response["Content-Disposition"] = (
-                'attachment; filename="applywise-applications.json"'
-            )
+            response["Content-Disposition"] = 'attachment; filename="applywise-applications.json"'
             return response
 
         # CSV (default).
@@ -390,9 +376,7 @@ class ExportView(APIView):
             return s
 
         response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = (
-            'attachment; filename="applywise-applications.csv"'
-        )
+        response["Content-Disposition"] = 'attachment; filename="applywise-applications.csv"'
         writer = csv.DictWriter(response, fieldnames=CSV_HEADERS)
         writer.writeheader()
         for app in apps_qs:
@@ -420,6 +404,4 @@ class DailyCountsView(APIView):
             .order_by("date")
         )
 
-        return Response(
-            [{"date": str(c["date"]), "count": c["count"]} for c in counts]
-        )
+        return Response([{"date": str(c["date"]), "count": c["count"]} for c in counts])

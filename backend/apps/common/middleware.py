@@ -25,8 +25,7 @@ class SecurityHeadersMiddleware:
         # Disable powerful APIs by default
         response.setdefault(
             "Permissions-Policy",
-            "geolocation=(), microphone=(), camera=(), payment=(), usb=(), "
-            "interest-cohort=()",
+            "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()",
         )
 
         # Process-isolate our window

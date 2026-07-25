@@ -69,17 +69,13 @@ class TestRegister:
 @pytest.mark.django_db
 class TestLogin:
     def test_login_success(self, api_client, user):
-        response = api_client.post(
-            LOGIN_URL, {"email": user.email, "password": "testpass123!"}
-        )
+        response = api_client.post(LOGIN_URL, {"email": user.email, "password": "testpass123!"})
         assert response.status_code == status.HTTP_200_OK
         assert "access" in response.data
         assert "refresh" in response.data
 
     def test_login_invalid_credentials(self, api_client, user):
-        response = api_client.post(
-            LOGIN_URL, {"email": user.email, "password": "wrongpass"}
-        )
+        response = api_client.post(LOGIN_URL, {"email": user.email, "password": "wrongpass"})
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_login_nonexistent_user(self, api_client):

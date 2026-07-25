@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import csv
 import io
-from typing import Iterable
+from collections.abc import Iterable
 
 DEFAULT_MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
 DEFAULT_MAX_PREVIEW_ROWS = 100
@@ -50,13 +50,11 @@ def _normalize_header(h: str) -> str:
 def _read_csv(file_obj, max_size: int) -> tuple[list[str], list[dict]]:
     raw = file_obj.read(max_size + 1)
     if len(raw) > max_size:
-        raise ImportParseError(
-            f"CSV exceeds size limit ({max_size // 1024 // 1024} MB)"
-        )
+        raise ImportParseError(f"CSV exceeds size limit ({max_size // 1024 // 1024} MB)")
     try:
         text = raw.decode("utf-8-sig")  # tolerate BOM
-    except UnicodeDecodeError:
-        raise ImportParseError("File must be UTF-8 encoded")
+    except UnicodeDecodeError as e:
+        raise ImportParseError("File must be UTF-8 encoded") from e
 
     reader = csv.DictReader(io.StringIO(text))
     headers = [_normalize_header(h) for h in (reader.fieldnames or [])]
@@ -64,9 +62,7 @@ def _read_csv(file_obj, max_size: int) -> tuple[list[str], list[dict]]:
     rows: list[dict] = []
     for row in reader:
         # Normalize keys to match `headers`
-        rows.append(
-            {_normalize_header(k): (v or "").strip() for k, v in row.items()}
-        )
+        rows.append({_normalize_header(k): (v or "").strip() for k, v in row.items()})
     return headers, rows
 
 
@@ -78,21 +74,21 @@ def _read_xlsx(file_obj, max_size: int) -> tuple[list[str], list[dict]]:
     size = file_obj.tell()
     file_obj.seek(pos)
     if size > max_size:
-        raise ImportParseError(
-            f"XLSX exceeds size limit ({max_size // 1024 // 1024} MB)"
-        )
+        raise ImportParseError(f"XLSX exceeds size limit ({max_size // 1024 // 1024} MB)")
 
     try:
         from openpyxl import load_workbook  # type: ignore
-    except ImportError:
+    except ImportError as e:
         raise ImportParseError(
             "Excel support is not installed on this server (openpyxl missing)."
-        )
+        ) from e
 
     try:
         wb = load_workbook(file_obj, read_only=True, data_only=True)
-    except Exception as e:
-        raise ImportParseError(f"Could not read XLSX file: {e}")
+    except (OSError, ValueError, KeyError) as e:
+        # openpyxl raises a mix depending on the failure mode — corrupt zip
+        # (BadZipFile is OSError subclass), wrong format (ValueError), etc.
+        raise ImportParseError(f"Could not read XLSX file: {e}") from e
 
     ws = wb.active
     if ws is None:
@@ -109,7 +105,7 @@ def _read_xlsx(file_obj, max_size: int) -> tuple[list[str], list[dict]]:
     rows: list[dict] = []
     for values in iterator:
         row: dict[str, str] = {}
-        for h, v in zip(headers, values):
+        for h, v in zip(headers, values, strict=False):
             if not h:
                 continue
             if v is None:
