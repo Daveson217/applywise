@@ -35,6 +35,11 @@ CACHES = {
     }
 }
 
+# Default tests to "payments on" so existing enforcement tests still assert
+# what they were written to assert. Tests that specifically exercise the
+# beta-mode behavior use `@override_settings(PAYMENTS_ENABLED=False)`.
+PAYMENTS_ENABLED = True
+
 # Override the strict prod throttle rates with permissive ones so test
 # suites running a few hundred requests in seconds don't trip over their
 # own limits. We keep the rates non-empty so the throttle classes run and

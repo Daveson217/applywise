@@ -68,12 +68,21 @@ export function UsagePanel() {
 
   return (
     <div className="max-w-2xl space-y-4">
+      {!data.payments_enabled && (
+        <div className="rounded-md border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+          <strong className="text-primary">Beta mode:</strong>{" "}
+          <span className="text-muted-foreground">
+            all features are unlocked. Usage is tracked but not capped.
+          </span>
+        </div>
+      )}
+
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">Current plan:</span>
         <Badge variant="secondary" className="capitalize">
           {data.plan}
         </Badge>
-        {data.plan === "free" && (
+        {data.payments_enabled && data.plan === "free" && (
           <Link to="/pricing" className="ml-auto text-sm text-primary hover:underline">
             Upgrade →
           </Link>

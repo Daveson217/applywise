@@ -7,6 +7,8 @@ export interface ResourceQuota {
 }
 
 export interface UsageSummary {
+  /** True when tier limits are enforced. False in beta / testing mode. */
+  payments_enabled: boolean;
   plan: string;
   resources: {
     applications: ResourceQuota;

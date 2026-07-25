@@ -315,22 +315,26 @@ class ImportCSVView(APIView):
 
 
 class ExportView(APIView):
-    """Export applications as CSV or JSON. Gated by Pro+ subscription."""
+    """Export applications as CSV or JSON. Gated by Pro+ subscription
+    (unless PAYMENTS_ENABLED is False, in which case everyone can export)."""
 
     def get(self, request):
-        # Inline permission check (avoids circular import)
-        try:
-            sub = request.user.subscription
-            if sub.plan not in ("pro", "premium"):
+        from apps.billing.quotas import payments_enabled
+
+        if payments_enabled():
+            # Inline permission check (avoids circular import)
+            try:
+                sub = request.user.subscription
+                if sub.plan not in ("pro", "premium"):
+                    return Response(
+                        {"error": "Export requires a Pro or Premium subscription."},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+            except Exception:
                 return Response(
                     {"error": "Export requires a Pro or Premium subscription."},
                     status=status.HTTP_403_FORBIDDEN,
                 )
-        except Exception:
-            return Response(
-                {"error": "Export requires a Pro or Premium subscription."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
 
         # Use `type` rather than `format` because DRF reserves `format` for
         # renderer negotiation and would 404 on unknown values.

@@ -233,6 +233,14 @@ STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET", default="")
 STRIPE_PRICE_PRO = env("STRIPE_PRICE_PRO", default="")
 STRIPE_PRICE_PREMIUM = env("STRIPE_PRICE_PREMIUM", default="")
 
+# Payments master switch.
+# When False, ALL quota + provider checks short-circuit to "allowed" and every
+# feature is unlocked for every user (equivalent to Premium tier). The pricing
+# UI hides upgrade prompts. Intended for testing and pre-launch beta periods.
+# Set to True in production once you're ready to enforce tier limits and take
+# payments.
+PAYMENTS_ENABLED = env.bool("PAYMENTS_ENABLED", default=False)
+
 # Django Allauth
 SITE_ID = 1
 AUTHENTICATION_BACKENDS = [

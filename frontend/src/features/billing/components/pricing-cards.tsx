@@ -11,9 +11,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { Check } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 
 import { billingApi, type PlanInfo } from "../api";
+import { useUsage } from "../usage-api";
 
 export function PricingCards() {
   const { data: plans, isLoading } = useQuery({
@@ -25,6 +26,29 @@ export function PricingCards() {
     queryKey: ["billing", "subscription"],
     queryFn: () => billingApi.getSubscription().then((r) => r.data),
   });
+
+  const { data: usage } = useUsage();
+
+  // Beta / testing mode — payments disabled globally. Show a banner
+  // instead of upgrade prompts.
+  if (usage && !usage.payments_enabled) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <Card className="border-primary/40 bg-primary/5">
+          <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+            <Sparkles className="h-10 w-10 text-primary" />
+            <h3 className="text-lg font-semibold">
+              Everything's unlocked — you're in beta mode
+            </h3>
+            <p className="max-w-md text-sm text-muted-foreground">
+              All features are enabled for every account while we're in early
+              access. When we start charging, you'll see plan options here.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

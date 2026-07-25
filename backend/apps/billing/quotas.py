@@ -20,10 +20,27 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
+from django.conf import settings
 from django.utils import timezone as django_timezone
 
 from .models import PLAN_LIMITS
 from .permissions import get_user_limits, get_user_plan
+
+
+def payments_enabled() -> bool:
+    """Master switch. When False, every quota check returns 'allowed'.
+
+    Read at call time (not import time) so tests can flip the setting
+    via `@override_settings` without needing to reload this module.
+    """
+    return bool(getattr(settings, "PAYMENTS_ENABLED", False))
+
+
+def _unlocked_result(plan: str = "premium") -> "QuotaResult":
+    """Shape returned when PAYMENTS_ENABLED is False. All limits are None
+    so the frontend renders 'unlimited' badges rather than confusing
+    N/M progress bars."""
+    return QuotaResult(allowed=True, plan=plan, limit=None, used=None)
 
 # Map AI feature name → PLAN_LIMITS key for monthly cap
 AI_FEATURE_LIMIT_KEYS = {
@@ -86,6 +103,18 @@ def reserve_ai_quota(user, feature: str) -> QuotaResult:
 
     from apps.ai.models import AIUsageLog
 
+    # Payments off — skip locking + reservation. Still create a usage-log
+    # row so admin dashboards + get_usage_summary reflect real usage even
+    # when unbounded.
+    if not payments_enabled():
+        log = AIUsageLog.objects.create(
+            user=user, feature=feature, provider="pending",
+            model="pending", input_tokens=0, output_tokens=0,
+        )
+        result = _unlocked_result()
+        result.reservation_id = log.pk  # type: ignore[attr-defined]
+        return result
+
     User = get_user_model()
 
     with transaction.atomic():
@@ -146,6 +175,9 @@ def reserve_resource_quota(user, resource_key: str, model_cls) -> QuotaResult:
     from django.contrib.auth import get_user_model
     from django.db import transaction
 
+    if not payments_enabled():
+        return _unlocked_result()
+
     User = get_user_model()
 
     # Already in atomic block from caller — just lock the user
@@ -156,6 +188,8 @@ def reserve_resource_quota(user, resource_key: str, model_cls) -> QuotaResult:
 
 def check_ai_quota(user, feature: str) -> QuotaResult:
     """Can the user invoke this AI feature right now (monthly cap)?"""
+    if not payments_enabled():
+        return _unlocked_result()
     plan = get_user_plan(user)
     limits = get_user_limits(user)
 
@@ -185,6 +219,8 @@ def check_ai_quota(user, feature: str) -> QuotaResult:
 
 def check_provider_allowed(user, provider: str, model: str | None = None) -> QuotaResult:
     """Free tier can only use Gemini Flash. Pro/Premium can use anything."""
+    if not payments_enabled():
+        return _unlocked_result()
     plan = get_user_plan(user)
     limits = get_user_limits(user)
 
@@ -218,6 +254,8 @@ def check_resource_quota(user, resource_key: str, current_count: int) -> QuotaRe
     `resource_key` is a PLAN_LIMITS key like 'max_applications'.
     Pass the current row count for the user.
     """
+    if not payments_enabled():
+        return _unlocked_result()
     plan = get_user_plan(user)
     limits = get_user_limits(user)
     limit = limits.get(resource_key)
@@ -242,10 +280,17 @@ def check_resource_quota(user, resource_key: str, current_count: int) -> QuotaRe
 
 def get_usage_summary(user) -> dict:
     """Snapshot of all quotas for the user — used by the frontend to show
-    progress bars and disable buttons before the user clicks them."""
+    progress bars and disable buttons before the user clicks them.
+
+    When PAYMENTS_ENABLED is False, every `limit` is None (frontend renders
+    as "unlimited") and `payments_enabled: False` tells the pricing page
+    to hide upgrade prompts. Real `used` counts still surface so admins
+    can see activity even in beta mode.
+    """
     from apps.applications.models import Application, CVVersion
     from apps.watchlist.models import WatchlistCompany
 
+    enabled = payments_enabled()
     plan = get_user_plan(user)
     limits = get_user_limits(user)
 
@@ -257,35 +302,30 @@ def get_usage_summary(user) -> dict:
     qa_used = get_monthly_ai_usage(user, "qa")
     ats_used = get_monthly_ai_usage(user, "ats_score")
 
+    def _limit(key: str) -> int | None:
+        # None means "unlimited" — either the plan's own limit is None,
+        # or payments are globally disabled.
+        return None if not enabled else limits.get(key)
+
+    def _providers() -> list[str]:
+        # When payments are off, expose all providers so the frontend
+        # dropdown isn't artificially restricted.
+        if not enabled:
+            return ["gemini", "openai", "anthropic"]
+        return limits.get("allowed_providers", [])
+
     return {
-        "plan": plan,
+        "payments_enabled": enabled,
+        "plan": plan if enabled else "beta",
         "resources": {
-            "applications": {
-                "used": apps_count,
-                "limit": limits.get("max_applications"),
-            },
-            "watchlist": {
-                "used": watchlist_count,
-                "limit": limits.get("max_watchlist"),
-            },
-            "cv_versions": {
-                "used": cv_count,
-                "limit": limits.get("max_cv_versions"),
-            },
+            "applications": {"used": apps_count, "limit": _limit("max_applications")},
+            "watchlist": {"used": watchlist_count, "limit": _limit("max_watchlist")},
+            "cv_versions": {"used": cv_count, "limit": _limit("max_cv_versions")},
         },
         "ai_monthly": {
-            "cover_letter": {
-                "used": cover_letters_used,
-                "limit": limits.get("max_cover_letters_monthly"),
-            },
-            "qa": {
-                "used": qa_used,
-                "limit": limits.get("max_qa_monthly"),
-            },
-            "ats_score": {
-                "used": ats_used,
-                "limit": limits.get("max_ats_scores_monthly"),
-            },
+            "cover_letter": {"used": cover_letters_used, "limit": _limit("max_cover_letters_monthly")},
+            "qa": {"used": qa_used, "limit": _limit("max_qa_monthly")},
+            "ats_score": {"used": ats_used, "limit": _limit("max_ats_scores_monthly")},
         },
-        "providers": limits.get("allowed_providers", []),
+        "providers": _providers(),
     }
