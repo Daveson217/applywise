@@ -89,3 +89,10 @@ STORAGES["default"] = {
         "querystring_auth": True,
     },
 }
+
+import sentry_sdk
+sentry_sdk.init(
+    dsn=env("SENTRY_DSN", default=""),
+    traces_sample_rate=0.1,
+    send_default_pii=False,
+)
