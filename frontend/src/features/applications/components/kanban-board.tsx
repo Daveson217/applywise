@@ -1,5 +1,4 @@
 import { Badge } from "@/components/ui/badge";
-import { STATUS_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { Application } from "@/types/application";
 import {
@@ -113,7 +112,7 @@ interface KanbanColumnProps {
 }
 
 function KanbanColumn({
-  status,
+  status: _status,
   label,
   color,
   applications,

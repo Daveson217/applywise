@@ -5,6 +5,7 @@ import type {
   RegisterResponse,
   TokenPair,
   User,
+  UserProfile,
 } from "@/types/auth";
 
 export const authApi = {
@@ -21,8 +22,9 @@ export const authApi = {
 
   getMe: () => api.get<User>("/users/me/"),
 
-  updateMe: (data: Partial<User & { profile: Partial<User["profile"]> }>) =>
-    api.patch<User>("/users/me/", data),
+  updateMe: (
+    data: Partial<Omit<User, "profile">> & { profile?: Partial<UserProfile> }
+  ) => api.patch<User>("/users/me/", data),
 
   requestPasswordReset: (email: string) =>
     api.post<{ message: string }>("/auth/password/reset-request/", { email }),

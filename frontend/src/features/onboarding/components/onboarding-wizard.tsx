@@ -35,7 +35,6 @@ const steps = [
 export function OnboardingWizard() {
   const [currentStep, setCurrentStep] = useState(1);
   const navigate = useNavigate();
-  const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
 
   const [profile, setProfile] = useState({

@@ -44,4 +44,4 @@ export const applicationSchema = z
     }
   );
 
-export type ApplicationFormData = z.infer<typeof applicationSchema>;
+export type ApplicationFormData = z.input<typeof applicationSchema>;

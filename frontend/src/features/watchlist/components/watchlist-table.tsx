@@ -7,8 +7,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
-import type { WatchlistCompany } from "@/types/watchlist";
 import { formatDistanceToNow } from "date-fns";
 import {
   AlertCircle,
