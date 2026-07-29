@@ -77,3 +77,15 @@ LOGGING = {
         "django.request": {"handlers": ["stdout"], "level": "WARNING"},
     },
 }
+
+STORAGES["default"] = {
+    "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+    "OPTIONS": {
+        "bucket_name": env("R2_BUCKET"),
+        "access_key": env("R2_ACCESS_KEY_ID"),
+        "secret_key": env("R2_SECRET_ACCESS_KEY"),
+        "endpoint_url": env("R2_ENDPOINT_URL"),
+        "default_acl": None,
+        "querystring_auth": True,
+    },
+}
