@@ -198,7 +198,7 @@ from celery.schedules import crontab  # noqa: E402
 CELERY_BEAT_SCHEDULE = {
     "monitor-all-watchlist-companies": {
         "task": "apps.watchlist.tasks.monitor_all_companies",
-        "schedule": crontab(minute=0, hour="*/8"), #crontab(minute=0),  # top of every hour
+        "schedule": crontab(minute=0, hour="*/8"),  # crontab(minute=0),  # top of every hour
     },
 }
 

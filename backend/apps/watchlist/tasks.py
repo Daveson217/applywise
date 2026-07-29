@@ -106,9 +106,7 @@ def _merge_rule_with_defaults(rule, defaults):
         "locations": rule.locations if rule.locations else defaults["locations"],
         "job_types": rule.job_types if rule.job_types else defaults["job_types"],
         # Union: rule-level + profile-level excludes both apply.
-        "exclude_keywords": list(
-            {*(rule.exclude_keywords or []), *defaults["exclude_keywords"]}
-        ),
+        "exclude_keywords": list({*(rule.exclude_keywords or []), *defaults["exclude_keywords"]}),
         "search_description": rule.search_description,
     }
     return merged

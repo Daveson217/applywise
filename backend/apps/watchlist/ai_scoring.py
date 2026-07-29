@@ -122,9 +122,7 @@ def score_posting(*, posting, user) -> float | None:
             description=posting.description_text,
             prefs=prefs,
         )
-        response = asyncio.run(
-            provider.generate(prompt, context={"system": _SYSTEM_PROMPT})
-        )
+        response = asyncio.run(provider.generate(prompt, context={"system": _SYSTEM_PROMPT}))
     except Exception as exc:
         # Fail-open. Don't gate notifications on a flaky LLM.
         logger.warning(f"AI relevance scoring failed for posting {posting.id}: {exc}")
