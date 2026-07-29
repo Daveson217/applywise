@@ -16,7 +16,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements/ requirements/
-RUN pip install --no-cache-dir -r requirements/dev.txt
+RUN pip install --no-cache-dir -r requirements/prod.txt
 
 # Install Playwright Chromium (only browser we need; saves ~600MB vs all)
 RUN playwright install chromium --with-deps || playwright install chromium

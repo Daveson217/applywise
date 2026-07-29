@@ -91,13 +91,8 @@ STORAGES["default"] = {
 }
 
 import sentry_sdk
-sentry_sdk.init(
-    dsn=env("SENTRY_DSN", default=""),
-    traces_sample_rate=0.1,
-    send_default_pii=False,
-)
-sentry_sdk.init(
-    dsn=env("VITE_SENTRY_DSN", default=""),
-    traces_sample_rate=0.1,
-    send_default_pii=False,
-)
+try:
+    import sentry_sdk
+    sentry_sdk.init(dsn=env("SENTRY_DSN", default=""), traces_sample_rate=0.1, send_default_pii=False)
+except ImportError:
+    pass
