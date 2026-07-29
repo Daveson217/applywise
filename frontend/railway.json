@@ -1,0 +1,9 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "buildCommand": "npm ci && npm run build"
+  },
+  "deploy": {
+    "startCommand": "node ./node_modules/serve/build/main.js -s dist -l tcp://0.0.0.0:$PORT"
+  }
+}
