@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
+import type { WatchlistCompany } from "@/types/watchlist";
 import {
   AlertCircle,
   CheckCircle,
@@ -15,6 +16,7 @@ import {
   ExternalLink,
   MoreHorizontal,
   Plus,
+  Settings2,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -23,6 +25,7 @@ import { useState } from "react";
 import { useDeleteWatchlistCompany, useWatchlist } from "../hooks";
 import { AddCompanyForm } from "./add-company-form";
 import { ImportDialog } from "./import-dialog";
+import { RulesDialog } from "./rules-dialog";
 
 const atsLabels: Record<string, string> = {
   greenhouse: "Greenhouse",
@@ -45,6 +48,7 @@ export function WatchlistTable() {
   const deleteMutation = useDeleteWatchlistCompany();
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [rulesFor, setRulesFor] = useState<WatchlistCompany | null>(null);
 
   const companies = data?.results || [];
 
@@ -163,6 +167,10 @@ export function WatchlistTable() {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setRulesFor(company)}>
+                          <Settings2 className="mr-2 h-4 w-4" />
+                          Rules ({company.rules?.length ?? 0})
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
                           onClick={() =>
@@ -184,6 +192,11 @@ export function WatchlistTable() {
 
       <AddCompanyForm open={addOpen} onOpenChange={setAddOpen} />
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} />
+      <RulesDialog
+        company={rulesFor}
+        open={rulesFor !== null}
+        onOpenChange={(open) => !open && setRulesFor(null)}
+      />
     </div>
   );
 }

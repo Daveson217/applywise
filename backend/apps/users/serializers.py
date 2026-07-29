@@ -28,6 +28,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "default_llm_provider",
             "default_llm_model",
             "onboarding_completed",
+            "ai_relevance_enabled",
         ]
 
     @staticmethod

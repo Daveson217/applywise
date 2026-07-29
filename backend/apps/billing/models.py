@@ -31,6 +31,7 @@ PLAN_LIMITS = {
         "csv_export": False,
         "sms_notifications": False,
         "offer_comparison": False,
+        "ai_relevance_scoring": False,
     },
     "pro": {
         "max_applications": None,
@@ -45,6 +46,7 @@ PLAN_LIMITS = {
         "csv_export": True,
         "sms_notifications": True,
         "offer_comparison": True,
+        "ai_relevance_scoring": True,
     },
     "premium": {
         "max_applications": None,
@@ -59,6 +61,7 @@ PLAN_LIMITS = {
         "csv_export": True,
         "sms_notifications": True,
         "offer_comparison": True,
+        "ai_relevance_scoring": True,
     },
 }
 

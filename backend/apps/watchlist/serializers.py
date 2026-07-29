@@ -61,6 +61,7 @@ class JobPostingSerializer(serializers.ModelSerializer):
             "is_active",
             "is_reposted",
             "matched_rules",
+            "ai_relevance_score",
         ]
 
 

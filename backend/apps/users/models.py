@@ -73,6 +73,7 @@ class UserProfile(models.Model):
     )
     default_llm_model = models.CharField(max_length=50, default="gemini-2.5-flash")
     onboarding_completed = models.BooleanField(default=False)
+    ai_relevance_enabled = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Profile: {self.user.email}"

@@ -1,8 +1,10 @@
 export interface WatchlistRule {
   id: number;
   keywords: string[];
+  exclude_keywords: string[];
   locations: string[];
   job_types: string[];
+  search_description: boolean;
   is_active: boolean;
 }
 
@@ -32,6 +34,7 @@ export interface JobPosting {
   is_active: boolean;
   is_reposted: boolean;
   matched_rules: boolean;
+  ai_relevance_score: number | null;
 }
 
 export interface ATSDetectResult {

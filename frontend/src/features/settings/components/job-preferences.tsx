@@ -36,6 +36,9 @@ export function JobPreferences() {
   const [jobTypes, setJobTypes] = useState<string[]>(
     user?.profile?.target_job_types ?? []
   );
+  const [aiEnabled, setAiEnabled] = useState<boolean>(
+    user?.profile?.ai_relevance_enabled ?? false
+  );
 
   const {
     register,
@@ -64,6 +67,7 @@ export function JobPreferences() {
         excluded_keywords: splitList(data.excluded_keywords),
         preferred_locations: splitList(data.preferred_locations),
         target_job_types: jobTypes,
+        ai_relevance_enabled: aiEnabled,
       },
     });
     setUser(res.data);
@@ -139,6 +143,30 @@ export function JobPreferences() {
         <p className="text-xs text-muted-foreground">
           Leave empty to receive alerts for any job type.
         </p>
+      </div>
+
+      <div className="space-y-2 rounded-md border border-input bg-muted/30 p-4">
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={aiEnabled}
+            onChange={(e) => setAiEnabled(e.target.checked)}
+            className="mt-1 h-4 w-4"
+          />
+          <div>
+            <div className="text-sm font-medium">
+              AI relevance scoring{" "}
+              <span className="ml-1 rounded bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
+                Pro
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              After keyword matching, each new posting is scored by an LLM
+              against your preferences. Only postings that clear the
+              relevance threshold trigger a notification.
+            </p>
+          </div>
+        </label>
       </div>
 
       <Button type="submit" disabled={isSubmitting}>

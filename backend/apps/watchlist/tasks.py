@@ -131,6 +131,7 @@ def _check_rules(posting, company):
     """
     from apps.notifications.models import Notification
 
+    from .ai_scoring import RELEVANCE_THRESHOLD, score_posting, should_score
     from .matching import matches
 
     defaults = _get_profile_defaults(company.user)
@@ -153,6 +154,16 @@ def _check_rules(posting, company):
             **filters,
         ):
             continue
+
+        # Second-pass AI relevance gate (Pro / opt-in). Fail-open: if the
+        # scorer returns None (LLM error, no prefs, etc.), we still notify.
+        if should_score(company.user):
+            score = score_posting(posting=posting, user=company.user)
+            if score is not None:
+                posting.ai_relevance_score = score
+                posting.save(update_fields=["ai_relevance_score"])
+                if score < RELEVANCE_THRESHOLD:
+                    return
 
         posting.matched_rules = True
         posting.save()

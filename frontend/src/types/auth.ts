@@ -16,6 +16,7 @@ export interface UserProfile {
   default_llm_provider: string;
   default_llm_model: string;
   onboarding_completed: boolean;
+  ai_relevance_enabled: boolean;
 }
 
 export interface User {

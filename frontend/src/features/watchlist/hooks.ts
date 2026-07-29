@@ -1,3 +1,4 @@
+import type { WatchlistRule } from "@/types/watchlist";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { watchlistApi } from "./api";
@@ -58,6 +59,38 @@ export function useCommitWatchlistImport() {
   return useMutation({
     mutationFn: (rows: Array<{ name: string; careers_url: string }>) =>
       watchlistApi.commitImport(rows).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+    },
+  });
+}
+
+export function useCreateRule(companyId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Omit<WatchlistRule, "id">) =>
+      watchlistApi.createRule(companyId, data).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+    },
+  });
+}
+
+export function useUpdateRule(companyId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ruleId, data }: { ruleId: number; data: Partial<WatchlistRule> }) =>
+      watchlistApi.updateRule(companyId, ruleId, data).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+    },
+  });
+}
+
+export function useDeleteRule(companyId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ruleId: number) => watchlistApi.deleteRule(companyId, ruleId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["watchlist"] });
     },
