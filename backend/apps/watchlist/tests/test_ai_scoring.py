@@ -73,7 +73,7 @@ class TestAIScoringGate:
     @override_settings(PAYMENTS_ENABLED=False)
     def test_high_score_fires_notification(self, user):
         company, posting = self._setup(user, score_value=0.9)
-        with patch("apps.watchlist.tasks.score_posting", return_value=0.9):
+        with patch("apps.watchlist.ai_scoring.score_posting", return_value=0.9):
             _check_rules(posting, company)
         assert Notification.objects.filter(user=user).count() == 1
         posting.refresh_from_db()
@@ -82,7 +82,7 @@ class TestAIScoringGate:
     @override_settings(PAYMENTS_ENABLED=False)
     def test_low_score_skips_notification(self, user):
         company, posting = self._setup(user, score_value=0.3)
-        with patch("apps.watchlist.tasks.score_posting", return_value=0.3):
+        with patch("apps.watchlist.ai_scoring.score_posting", return_value=0.3):
             _check_rules(posting, company)
         # Below threshold → no notification, but score IS cached.
         assert Notification.objects.filter(user=user).count() == 0
@@ -93,7 +93,7 @@ class TestAIScoringGate:
     def test_scorer_error_fails_open(self, user):
         """LLM outage returns None → we still notify (tier-2 already passed)."""
         company, posting = self._setup(user, score_value=None)
-        with patch("apps.watchlist.tasks.score_posting", return_value=None):
+        with patch("apps.watchlist.ai_scoring.score_posting", return_value=None):
             _check_rules(posting, company)
         assert Notification.objects.filter(user=user).count() == 1
 
@@ -109,7 +109,7 @@ class TestAIScoringGate:
             url="https://example.com/job/2",
             location="Remote",
         )
-        with patch("apps.watchlist.tasks.score_posting") as mock_score:
+        with patch("apps.watchlist.ai_scoring.score_posting") as mock_score:
             _check_rules(posting, company)
         mock_score.assert_not_called()
         assert Notification.objects.filter(user=user).count() == 1

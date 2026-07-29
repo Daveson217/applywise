@@ -89,10 +89,7 @@ def contains_any(text: str, terms: set[str]) -> bool:
     """True if any term matches text at word boundaries."""
     if not terms:
         return False
-    for term in terms:
-        if _term_regex(term).search(text):
-            return True
-    return False
+    return any(_term_regex(term).search(text) for term in terms)
 
 
 def infer_job_types(title: str) -> set[str]:
