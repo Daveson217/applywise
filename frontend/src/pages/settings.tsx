@@ -1,6 +1,7 @@
 import { Separator } from "@/components/ui/separator";
 import { AccountSettings } from "@/features/settings/components/account-settings";
 import { AppearanceSettings } from "@/features/settings/components/appearance-settings";
+import { JobPreferences } from "@/features/settings/components/job-preferences";
 import { ProfileForm } from "@/features/settings/components/profile-form";
 import { UsagePanel } from "@/features/settings/components/usage-panel";
 import { cn } from "@/lib/utils";
@@ -8,6 +9,7 @@ import { useState } from "react";
 
 const tabs = [
   { id: "profile", label: "Profile" },
+  { id: "job-preferences", label: "Job Preferences" },
   { id: "appearance", label: "Appearance" },
   { id: "usage", label: "Usage & Plan" },
   { id: "account", label: "Account" },
@@ -47,6 +49,7 @@ export function SettingsPage() {
       <Separator className="hidden" />
 
       {activeTab === "profile" && <ProfileForm />}
+      {activeTab === "job-preferences" && <JobPreferences />}
       {activeTab === "appearance" && <AppearanceSettings />}
       {activeTab === "usage" && <UsagePanel />}
       {activeTab === "account" && <AccountSettings />}

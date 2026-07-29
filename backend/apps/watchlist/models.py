@@ -50,8 +50,10 @@ class WatchlistRule(models.Model):
         related_name="rules",
     )
     keywords = models.JSONField(default=list)
+    exclude_keywords = models.JSONField(default=list)
     locations = models.JSONField(default=list)
     job_types = models.JSONField(default=list)
+    search_description = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):

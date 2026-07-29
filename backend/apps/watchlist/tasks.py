@@ -79,38 +79,95 @@ def monitor_company(self, company_id: int):
         raise self.retry(exc=exc) from exc
 
 
+def _get_profile_defaults(user):
+    """Pull job-preference defaults off UserProfile. Returns a dict of the
+    four fields the matcher understands. Missing profile = all empty lists."""
+    profile = getattr(user, "profile", None)
+    if profile is None:
+        return {
+            "keywords": [],
+            "exclude_keywords": [],
+            "locations": [],
+            "job_types": [],
+        }
+    return {
+        "keywords": list(profile.target_roles or []),
+        "exclude_keywords": list(profile.excluded_keywords or []),
+        "locations": list(profile.preferred_locations or []),
+        "job_types": list(profile.target_job_types or []),
+    }
+
+
+def _merge_rule_with_defaults(rule, defaults):
+    """Rule field wins if non-empty; otherwise fall back to profile default.
+    Exclusions are unioned so profile-level excludes ALWAYS apply."""
+    merged = {
+        "keywords": rule.keywords if rule.keywords else defaults["keywords"],
+        "locations": rule.locations if rule.locations else defaults["locations"],
+        "job_types": rule.job_types if rule.job_types else defaults["job_types"],
+        # Union: rule-level + profile-level excludes both apply.
+        "exclude_keywords": list(
+            {*(rule.exclude_keywords or []), *defaults["exclude_keywords"]}
+        ),
+        "search_description": rule.search_description,
+    }
+    return merged
+
+
 def _check_rules(posting, company):
     """Check posting against active rules; create Notification on match.
+
+    Order of precedence:
+      1. Per-company WatchlistRule fields (if set) — override profile defaults.
+      2. UserProfile job-preference fields — fallback when a rule field is empty.
+      3. If the company has no active rules at all, match against the raw
+         profile defaults (auto-alert mode).
+
+    Exclusions from the profile ALWAYS apply, even when a rule sets its own
+    excludes — safer default.
 
     Creating the Notification fires a post_save signal that enqueues the
     email-send task. One notification per posting (first matching rule wins).
     """
     from apps.notifications.models import Notification
 
-    for rule in company.rules.filter(is_active=True):
-        title_lower = posting.title.lower()
-        location_lower = posting.location.lower()
+    from .matching import matches
 
-        keyword_match = not rule.keywords or any(kw.lower() in title_lower for kw in rule.keywords)
-        location_match = not rule.locations or any(
-            loc.lower() in location_lower for loc in rule.locations
+    defaults = _get_profile_defaults(company.user)
+    active_rules = list(company.rules.filter(is_active=True))
+
+    # No rules: match against profile defaults directly. Skip entirely if the
+    # profile has nothing configured (avoid spamming the user with everything).
+    if not active_rules:
+        if not any(defaults.values()):
+            return
+        candidates = [{**defaults, "search_description": False}]
+    else:
+        candidates = [_merge_rule_with_defaults(r, defaults) for r in active_rules]
+
+    for filters in candidates:
+        if not matches(
+            title=posting.title,
+            location=posting.location,
+            description=posting.description_text,
+            **filters,
+        ):
+            continue
+
+        posting.matched_rules = True
+        posting.save()
+
+        # Structured metadata lets the email task look up the posting
+        # safely (no free-text parsing).
+        Notification.objects.create(
+            user=company.user,
+            type="job_alert",
+            title=f"New role at {company.name}: {posting.title}"[:255],
+            body=f"Matched your alert rules for {company.name}.",
+            link=posting.url,
+            metadata={"posting_id": posting.id, "company_id": company.id},
         )
-
-        if keyword_match and location_match:
-            posting.matched_rules = True
-            posting.save()
-
-            # Structured metadata lets the email task look up the posting
-            # safely (no free-text parsing).
-            Notification.objects.create(
-                user=company.user,
-                type="job_alert",
-                title=f"New role at {company.name}: {posting.title}"[:255],
-                body=f"Matched your alert rules for {company.name}.",
-                link=posting.url,
-                metadata={"posting_id": posting.id, "company_id": company.id},
-            )
-            break
+        break
 
 
 @shared_task

@@ -3,6 +3,8 @@ export interface UserProfile {
   graduation_date: string | null;
   university: string;
   target_roles: string[];
+  excluded_keywords: string[];
+  target_job_types: string[];
   preferred_locations: string[];
   linkedin_url: string;
   github_url: string;

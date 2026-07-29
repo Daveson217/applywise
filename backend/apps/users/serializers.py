@@ -15,6 +15,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "graduation_date",
             "university",
             "target_roles",
+            "excluded_keywords",
+            "target_job_types",
             "preferred_locations",
             "linkedin_url",
             "github_url",
@@ -53,6 +55,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     def validate_preferred_locations(self, value):
         return self._validate_string_list(value, max_items=20, max_item_length=100)
+
+    def validate_excluded_keywords(self, value):
+        return self._validate_string_list(value, max_items=30, max_item_length=100)
+
+    def validate_target_job_types(self, value):
+        return self._validate_string_list(value, max_items=10, max_item_length=30)
 
     def validate_bio(self, value):
         if value and len(value) > 2000:

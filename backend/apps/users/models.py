@@ -58,6 +58,8 @@ class UserProfile(models.Model):
     graduation_date = models.DateField(null=True, blank=True)
     university = models.CharField(max_length=255, blank=True)
     target_roles = models.JSONField(default=list, blank=True)
+    excluded_keywords = models.JSONField(default=list, blank=True)
+    target_job_types = models.JSONField(default=list, blank=True)
     preferred_locations = models.JSONField(default=list, blank=True)
     linkedin_url = models.URLField(blank=True)
     github_url = models.URLField(blank=True)

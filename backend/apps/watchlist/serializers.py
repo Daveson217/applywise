@@ -6,7 +6,15 @@ from .models import JobPosting, WatchlistCompany, WatchlistRule
 class WatchlistRuleSerializer(serializers.ModelSerializer):
     class Meta:
         model = WatchlistRule
-        fields = ["id", "keywords", "locations", "job_types", "is_active"]
+        fields = [
+            "id",
+            "keywords",
+            "exclude_keywords",
+            "locations",
+            "job_types",
+            "search_description",
+            "is_active",
+        ]
         read_only_fields = ["id"]
 
     @staticmethod
@@ -27,6 +35,9 @@ class WatchlistRuleSerializer(serializers.ModelSerializer):
         return cleaned
 
     def validate_keywords(self, value):
+        return self._bounded_string_list(value)
+
+    def validate_exclude_keywords(self, value):
         return self._bounded_string_list(value)
 
     def validate_locations(self, value):
