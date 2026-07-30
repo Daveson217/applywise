@@ -17,6 +17,7 @@ export interface UserProfile {
   default_llm_model: string;
   onboarding_completed: boolean;
   ai_relevance_enabled: boolean;
+  ai_relevance_threshold: number;
 }
 
 export interface User {

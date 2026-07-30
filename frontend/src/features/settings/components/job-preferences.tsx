@@ -39,6 +39,9 @@ export function JobPreferences() {
   const [aiEnabled, setAiEnabled] = useState<boolean>(
     user?.profile?.ai_relevance_enabled ?? false
   );
+  const [aiThreshold, setAiThreshold] = useState<number>(
+    user?.profile?.ai_relevance_threshold ?? 0.6
+  );
 
   const {
     register,
@@ -68,6 +71,7 @@ export function JobPreferences() {
         preferred_locations: splitList(data.preferred_locations),
         target_job_types: jobTypes,
         ai_relevance_enabled: aiEnabled,
+        ai_relevance_threshold: aiThreshold,
       },
     });
     setUser(res.data);
@@ -167,6 +171,31 @@ export function JobPreferences() {
             </p>
           </div>
         </label>
+
+        {aiEnabled && (
+          <div className="ml-7 space-y-1 pt-1">
+            <div className="flex items-center justify-between text-sm">
+              <Label htmlFor="ai-threshold">Relevance threshold</Label>
+              <span className="tabular-nums text-muted-foreground">
+                {aiThreshold.toFixed(2)}
+              </span>
+            </div>
+            <input
+              id="ai-threshold"
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={aiThreshold}
+              onChange={(e) => setAiThreshold(Number(e.target.value))}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Lower = more alerts, some off-target. Higher = fewer alerts,
+              stricter fit. Default 0.60.
+            </p>
+          </div>
+        )}
       </div>
 
       <Button type="submit" disabled={isSubmitting}>

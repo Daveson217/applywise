@@ -160,7 +160,11 @@ def _check_rules(posting, company):
             if score is not None:
                 posting.ai_relevance_score = score
                 posting.save(update_fields=["ai_relevance_score"])
-                if score < RELEVANCE_THRESHOLD:
+                profile = getattr(company.user, "profile", None)
+                threshold = (
+                    profile.ai_relevance_threshold if profile is not None else RELEVANCE_THRESHOLD
+                )
+                if score < threshold:
                     return
 
         posting.matched_rules = True

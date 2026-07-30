@@ -29,6 +29,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "default_llm_model",
             "onboarding_completed",
             "ai_relevance_enabled",
+            "ai_relevance_threshold",
         ]
 
     @staticmethod
@@ -71,6 +72,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
     def validate_weekly_goal(self, value):
         if not 1 <= value <= 200:
             raise serializers.ValidationError("Weekly goal must be 1-200.")
+        return value
+
+    def validate_ai_relevance_threshold(self, value):
+        if not 0.0 <= value <= 1.0:
+            raise serializers.ValidationError("Threshold must be between 0.0 and 1.0.")
         return value
 
 
