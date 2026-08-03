@@ -22,6 +22,37 @@ from .serializers import (
 )
 
 
+def _detect_and_apply_ats(company):
+    """Best-effort: try URL-based detection first, then name-based probe.
+    Silently no-op if neither works — the row just stays unscheduled.
+    Called on create and on update; safe to call repeatedly."""
+    if company.ats_provider:
+        return  # already detected; user can clear it manually if wrong
+
+    # 1) URL-based (fast, no HTTP).
+    if company.careers_url:
+        result = detect_ats_from_url(company.careers_url)
+        if result:
+            company.ats_provider = result[0]
+            company.ats_company_slug = result[1]
+            company.save(update_fields=["ats_provider", "ats_company_slug"])
+            return
+
+    # 2) Name-based probe (a few HTTP calls, bounded).
+    from .probe import probe_by_name
+
+    probed = probe_by_name(company.name)
+    if probed:
+        company.ats_provider = probed.provider
+        company.ats_company_slug = probed.slug
+        # Fill in the canonical URL if we didn't have one.
+        update_fields = ["ats_provider", "ats_company_slug"]
+        if not company.careers_url:
+            company.careers_url = probed.board_url
+            update_fields.append("careers_url")
+        company.save(update_fields=update_fields)
+
+
 class WatchlistCompanyViewSet(viewsets.ModelViewSet):
     serializer_class = WatchlistCompanySerializer
     search_fields = ["name"]
@@ -58,15 +89,16 @@ class WatchlistCompanyViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         company = serializer.save()
 
-        if company.careers_url:
-            result = detect_ats_from_url(company.careers_url)
-            if result:
-                company.ats_provider = result[0]
-                company.ats_company_slug = result[1]
-                company.save()
+        _detect_and_apply_ats(company)
 
         output_serializer = WatchlistCompanySerializer(company, context={"request": request})
         return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+
+    def perform_update(self, serializer):
+        # Re-run ATS detection if the URL changed. Also try the name-based
+        # probe fallback so an edit can "fix" a previously-unmatched entry.
+        company = serializer.save()
+        _detect_and_apply_ats(company)
 
 
 class WatchlistRuleViewSet(viewsets.ModelViewSet):
@@ -103,6 +135,34 @@ class ATSDetectView(APIView):
         if result:
             return Response({"detected": True, "provider": result[0], "slug": result[1]})
         return Response({"detected": False, "provider": None, "slug": None})
+
+
+class ATSProbeByNameView(APIView):
+    """Try to auto-detect a company's ATS by slugifying the name and probing
+    each known provider's public API. Best-effort fallback for when the user
+    doesn't have an ATS-recognizable URL."""
+
+    def post(self, request):
+        name = str(request.data.get("name") or "").strip()
+        if not name or len(name) > 200:
+            return Response(
+                {"error": "name is required (2-200 chars)"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from .probe import probe_by_name
+
+        result = probe_by_name(name)
+        if result:
+            return Response(
+                {
+                    "detected": True,
+                    "provider": result.provider,
+                    "slug": result.slug,
+                    "board_url": result.board_url,
+                }
+            )
+        return Response({"detected": False})
 
 
 # Header aliases we accept for the two watchlist columns. Users' CSVs are

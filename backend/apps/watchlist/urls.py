@@ -8,6 +8,7 @@ router.register("watchlist", views.WatchlistCompanyViewSet, basename="watchlist"
 
 urlpatterns = [
     path("watchlist/detect-ats/", views.ATSDetectView.as_view(), name="detect-ats"),
+    path("watchlist/probe/", views.ATSProbeByNameView.as_view(), name="probe-ats"),
     path("watchlist/import/", views.WatchlistImportView.as_view(), name="watchlist-import"),
     path(
         "watchlist/<int:company_pk>/rules/",

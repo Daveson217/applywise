@@ -96,3 +96,25 @@ export function useDeleteRule(companyId: number) {
     },
   });
 }
+
+export function useUpdateWatchlistCompany() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: { name?: string; careers_url?: string };
+    }) => watchlistApi.update(id, data).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+    },
+  });
+}
+
+export function useProbeByName() {
+  return useMutation({
+    mutationFn: (name: string) => watchlistApi.probeByName(name).then((r) => r.data),
+  });
+}

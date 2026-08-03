@@ -24,6 +24,14 @@ export const watchlistApi = {
   detectAts: (url: string) =>
     api.post<ATSDetectResult>("/watchlist/detect-ats/", { url }),
 
+  probeByName: (name: string) =>
+    api.post<{
+      detected: boolean;
+      provider?: string;
+      slug?: string;
+      board_url?: string;
+    }>("/watchlist/probe/", { name }),
+
   getPostings: (companyId: number) =>
     api.get<PaginatedResponse<JobPosting>>(
       `/watchlist/${companyId}/postings/`

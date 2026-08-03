@@ -15,6 +15,7 @@ import {
   Clock,
   ExternalLink,
   MoreHorizontal,
+  Pencil,
   Plus,
   Settings2,
   Trash2,
@@ -49,6 +50,7 @@ export function WatchlistTable() {
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [rulesFor, setRulesFor] = useState<WatchlistCompany | null>(null);
+  const [editing, setEditing] = useState<WatchlistCompany | null>(null);
 
   const companies = data?.results || [];
 
@@ -137,7 +139,13 @@ export function WatchlistTable() {
                           company.ats_provider}
                       </Badge>
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <span
+                        className="inline-flex items-center gap-1 text-xs text-yellow-700 dark:text-yellow-500"
+                        title="No ATS detected — this company is not being scraped. Click Edit to fix."
+                      >
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        Not scraping
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -167,6 +175,10 @@ export function WatchlistTable() {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setEditing(company)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setRulesFor(company)}>
                           <Settings2 className="mr-2 h-4 w-4" />
                           Rules ({company.rules?.length ?? 0})
@@ -191,6 +203,11 @@ export function WatchlistTable() {
       </div>
 
       <AddCompanyForm open={addOpen} onOpenChange={setAddOpen} />
+      <AddCompanyForm
+        open={editing !== null}
+        onOpenChange={(open) => !open && setEditing(null)}
+        company={editing}
+      />
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} />
       <RulesDialog
         company={rulesFor}
