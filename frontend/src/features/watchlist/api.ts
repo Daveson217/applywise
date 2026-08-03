@@ -3,6 +3,7 @@ import type { PaginatedResponse } from "@/types/api";
 import type {
   ATSDetectResult,
   JobPosting,
+  MatchedJob,
   WatchlistCompany,
   WatchlistRule,
 } from "@/types/watchlist";
@@ -36,6 +37,15 @@ export const watchlistApi = {
     api.get<PaginatedResponse<JobPosting>>(
       `/watchlist/${companyId}/postings/`
     ),
+
+  getMatches: () =>
+    api.get<PaginatedResponse<MatchedJob>>("/watchlist/matches/"),
+
+  dismissMatch: (id: number) =>
+    api.post<{ dismissed: boolean }>(`/watchlist/matches/${id}/dismiss/`),
+
+  recheckMatches: () =>
+    api.post<{ rechecked: number }>("/watchlist/recheck/"),
 
   createRule: (companyId: number, data: Omit<WatchlistRule, "id">) =>
     api.post<WatchlistRule>(`/watchlist/${companyId}/rules/`, data),

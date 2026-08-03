@@ -124,10 +124,12 @@ def _check_rules(posting, company):
     Exclusions from the profile ALWAYS apply, even when a rule sets its own
     excludes — safer default.
 
-    Creating the Notification fires a post_save signal that enqueues the
-    email-send task. One notification per posting (first matching rule wins).
+    Flags the posting as matched (for the in-app Matched Jobs feed) and sets
+    matched_at. It does NOT send an email — a scheduled digest task
+    (send_watchlist_digests) batches new matches into one summary per user,
+    so a company with 400 postings can't flood the inbox.
     """
-    from apps.notifications.models import Notification
+    from django.utils import timezone
 
     from .ai_scoring import RELEVANCE_THRESHOLD, score_posting, should_score
     from .matching import matches
@@ -154,7 +156,7 @@ def _check_rules(posting, company):
             continue
 
         # Second-pass AI relevance gate (Pro / opt-in). Fail-open: if the
-        # scorer returns None (LLM error, no prefs, etc.), we still notify.
+        # scorer returns None (LLM error, no prefs, etc.), we still match.
         if should_score(company.user):
             score = score_posting(posting=posting, user=company.user)
             if score is not None:
@@ -167,19 +169,10 @@ def _check_rules(posting, company):
                 if score < threshold:
                     return
 
+        # Flag for the feed + digest. No per-job email.
         posting.matched_rules = True
-        posting.save()
-
-        # Structured metadata lets the email task look up the posting
-        # safely (no free-text parsing).
-        Notification.objects.create(
-            user=company.user,
-            type="job_alert",
-            title=f"New role at {company.name}: {posting.title}"[:255],
-            body=f"Matched your alert rules for {company.name}.",
-            link=posting.url,
-            metadata={"posting_id": posting.id, "company_id": company.id},
-        )
+        posting.matched_at = timezone.now()
+        posting.save(update_fields=["matched_rules", "matched_at", "ai_relevance_score"])
         break
 
 
@@ -225,3 +218,148 @@ def monitor_all_companies():
         queued += 1
 
     logger.info(f"Queued monitoring for {queued}/{companies.count()} companies")
+
+
+# Minimum hours between digests per frequency tier. Beat runs the digest
+# dispatcher daily; each user is only sent one if enough time has elapsed.
+_DIGEST_MIN_HOURS = {"daily": 20, "weekly": 24 * 7 - 4}
+_DIGEST_MAX_JOBS = 50  # cap rows per email so the digest stays readable
+
+
+@shared_task
+def send_watchlist_digests():
+    """Batch newly-matched jobs into one summary email per user.
+
+    Replaces per-job emails. For each user whose digest is enabled and due,
+    gather matched/undismissed/unnotified active postings, send a single
+    email with links, mark them notified, and drop one in-app notification.
+    """
+    from datetime import timedelta
+
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone
+
+    from .models import JobPosting
+
+    user_model = get_user_model()
+    now = timezone.now()
+
+    users = user_model.objects.filter(
+        profile__watchlist_digest_frequency__in=["daily", "weekly"]
+    ).select_related("profile")
+
+    sent = 0
+    for user in users:
+        profile = user.profile
+        freq = profile.watchlist_digest_frequency
+        min_hours = _DIGEST_MIN_HOURS.get(freq)
+        if min_hours is None:
+            continue
+        # Respect the per-user cadence.
+        if profile.watchlist_digest_last_sent and profile.watchlist_digest_last_sent > (
+            now - timedelta(hours=min_hours)
+        ):
+            continue
+
+        pending = list(
+            JobPosting.objects.filter(
+                company__user=user,
+                matched_rules=True,
+                match_notified=False,
+                match_dismissed=False,
+                is_active=True,
+            )
+            .select_related("company")
+            .order_by("-ai_relevance_score", "-matched_at")[:_DIGEST_MAX_JOBS]
+        )
+        if not pending:
+            continue
+
+        _send_digest_email(user, pending)
+
+        JobPosting.objects.filter(id__in=[p.id for p in pending]).update(match_notified=True)
+        profile.watchlist_digest_last_sent = now
+        profile.save(update_fields=["watchlist_digest_last_sent"])
+
+        # Single in-app notification pointing at the Matched Jobs feed.
+        # bulk_create deliberately bypasses the post_save signal so it does
+        # NOT trigger the per-notification email path (we already sent the
+        # digest email above) — the bell badge still updates.
+        from apps.notifications.models import Notification
+
+        Notification.objects.bulk_create(
+            [
+                Notification(
+                    user=user,
+                    type="job_alert",
+                    title=f"{len(pending)} new job match{'es' if len(pending) != 1 else ''}",
+                    body="New roles matching your alerts are in your watchlist.",
+                    link="/watchlist",
+                    metadata={"digest": True, "count": len(pending)},
+                )
+            ]
+        )
+        sent += 1
+
+    logger.info(f"Sent {sent} watchlist digest(s)")
+
+
+def _send_digest_email(user, postings):
+    """Compose and send the digest email. Values are HTML-escaped."""
+    from django.conf import settings
+    from django.utils.html import escape
+
+    from apps.notifications.email import send_email
+
+    frontend = getattr(settings, "FRONTEND_URL", "http://localhost:5173").rstrip("/")
+    feed_url = f"{frontend}/watchlist"
+
+    # Plain-text body
+    text_lines = [
+        f"Hi {user.first_name or 'there'},",
+        "",
+        f"We found {len(postings)} new job(s) matching your alerts:",
+        "",
+    ]
+    for p in postings:
+        score = f" (relevance {round(p.ai_relevance_score * 100)}%)" if p.ai_relevance_score else ""
+        text_lines.append(f"- {p.title} @ {p.company.name} — {p.location or 'N/A'}{score}")
+        text_lines.append(f"  {p.url}")
+    text_lines += ["", f"See all matches: {feed_url}", "", "— Applywise"]
+    text = "\n".join(text_lines)
+
+    # HTML body
+    rows = []
+    for p in postings:
+        score = (
+            f'<span style="color:#666">· {round(p.ai_relevance_score * 100)}% match</span>'
+            if p.ai_relevance_score
+            else ""
+        )
+        rows.append(
+            f'<li style="margin:0 0 10px">'
+            f'<a href="{escape(p.url)}" style="color:#3B82F6;font-weight:500;text-decoration:none">'
+            f"{escape(p.title)}</a><br>"
+            f'<span style="color:#444">{escape(p.company.name)} — '
+            f"{escape(p.location or 'Location N/A')}</span> {score}</li>"
+        )
+    html_body = (
+        f"<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;"
+        f'max-width:560px;margin:24px auto;color:#111">'
+        f'<h2 style="margin:0 0 12px">{len(postings)} new job match'
+        f"{'es' if len(postings) != 1 else ''}</h2>"
+        f'<p>Hi {escape(user.first_name or "there")}, here are the latest roles '
+        f"matching your watchlist alerts:</p>"
+        f'<ul style="list-style:none;padding:0">{"".join(rows)}</ul>'
+        f'<p><a href="{escape(feed_url)}" style="display:inline-block;background:#3B82F6;'
+        f'color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:500">'
+        f"View all matches</a></p>"
+        f'<p style="color:#666;font-size:13px">You can change digest frequency in '
+        f"Settings → Job Preferences.</p></div>"
+    )
+
+    subject = f"{len(postings)} new job match{'es' if len(postings) != 1 else ''} — Applywise"
+    try:
+        send_email(user.email, subject, html_body, text)
+    except Exception as e:
+        logger.error(f"Failed to send watchlist digest to {user.email}: {e}")

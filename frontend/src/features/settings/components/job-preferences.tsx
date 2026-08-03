@@ -42,6 +42,9 @@ export function JobPreferences() {
   const [aiThreshold, setAiThreshold] = useState<number>(
     user?.profile?.ai_relevance_threshold ?? 0.6
   );
+  const [digestFrequency, setDigestFrequency] = useState<
+    "off" | "daily" | "weekly"
+  >(user?.profile?.watchlist_digest_frequency ?? "daily");
 
   const {
     register,
@@ -72,6 +75,7 @@ export function JobPreferences() {
         target_job_types: jobTypes,
         ai_relevance_enabled: aiEnabled,
         ai_relevance_threshold: aiThreshold,
+        watchlist_digest_frequency: digestFrequency,
       },
     });
     setUser(res.data);
@@ -146,6 +150,26 @@ export function JobPreferences() {
         </div>
         <p className="text-xs text-muted-foreground">
           Leave empty to receive alerts for any job type.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="digest_frequency">Email digest</Label>
+        <select
+          id="digest_frequency"
+          value={digestFrequency}
+          onChange={(e) =>
+            setDigestFrequency(e.target.value as "off" | "daily" | "weekly")
+          }
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        >
+          <option value="off">Off — no emails</option>
+          <option value="daily">Daily summary</option>
+          <option value="weekly">Weekly summary</option>
+        </select>
+        <p className="text-xs text-muted-foreground">
+          Matched jobs always appear in the Watchlist → Matched Jobs tab.
+          This controls how often we email you a summary of new matches.
         </p>
       </div>
 

@@ -118,3 +118,32 @@ export function useProbeByName() {
     mutationFn: (name: string) => watchlistApi.probeByName(name).then((r) => r.data),
   });
 }
+
+export function useMatchedJobs() {
+  return useQuery({
+    queryKey: ["watchlist", "matches"],
+    queryFn: () => watchlistApi.getMatches().then((r) => r.data),
+    // Keep the feed fresh while monitoring runs in the background.
+    refetchInterval: 30000,
+  });
+}
+
+export function useDismissMatch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => watchlistApi.dismissMatch(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["watchlist", "matches"] });
+    },
+  });
+}
+
+export function useRecheckMatches() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => watchlistApi.recheckMatches().then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["watchlist", "matches"] });
+    },
+  });
+}

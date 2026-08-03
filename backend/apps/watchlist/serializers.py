@@ -65,6 +65,29 @@ class JobPostingSerializer(serializers.ModelSerializer):
         ]
 
 
+class MatchedJobSerializer(serializers.ModelSerializer):
+    """A matched posting for the in-app Matched Jobs feed, with company name."""
+
+    company_name = serializers.CharField(source="company.name", read_only=True)
+    company_id = serializers.IntegerField(source="company.id", read_only=True)
+
+    class Meta:
+        model = JobPosting
+        fields = [
+            "id",
+            "company_id",
+            "company_name",
+            "title",
+            "url",
+            "location",
+            "ai_relevance_score",
+            "matched_at",
+            "first_seen_at",
+            "match_dismissed",
+        ]
+        read_only_fields = fields
+
+
 class WatchlistCompanySerializer(serializers.ModelSerializer):
     rules = WatchlistRuleSerializer(many=True, read_only=True)
     active_postings_count = serializers.SerializerMethodField()

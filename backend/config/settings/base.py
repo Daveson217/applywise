@@ -200,6 +200,12 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.watchlist.tasks.monitor_all_companies",
         "schedule": crontab(minute=0, hour="*/8"),  # crontab(minute=0),  # top of every hour
     },
+    # Digest dispatcher runs daily; each user's cadence (daily/weekly/off) is
+    # enforced inside the task via watchlist_digest_last_sent.
+    "send-watchlist-digests": {
+        "task": "apps.watchlist.tasks.send_watchlist_digests",
+        "schedule": crontab(minute=0, hour=13),  # 13:00 UTC daily
+    },
 }
 
 # Email (Resend)

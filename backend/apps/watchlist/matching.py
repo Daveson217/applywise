@@ -61,6 +61,92 @@ _JOB_TYPE_PATTERNS: dict[str, re.Pattern] = {
     "part_time": re.compile(r"\b(part[-\s]?time)\b", re.I),
 }
 
+# ─── US location awareness ───────────────────────────────────────────────
+# A country filter like "United States" must match postings whose location
+# reads "Mountain View, CA" or "Remote - US" — the literal string "united
+# states" almost never appears. We detect US-ness via state names/abbrs.
+
+# Terms a user might type to mean "anywhere in the US".
+_US_COUNTRY_TERMS = {"united states", "usa", "us", "u.s.", "u.s.a.", "america"}
+
+_US_STATE_NAMES = {
+    "alabama", "alaska", "arizona", "arkansas", "california", "colorado",
+    "connecticut", "delaware", "florida", "georgia", "hawaii", "idaho",
+    "illinois", "indiana", "iowa", "kansas", "kentucky", "louisiana", "maine",
+    "maryland", "massachusetts", "michigan", "minnesota", "mississippi",
+    "missouri", "montana", "nebraska", "nevada", "new hampshire", "new jersey",
+    "new mexico", "new york", "north carolina", "north dakota", "ohio",
+    "oklahoma", "oregon", "pennsylvania", "rhode island", "south carolina",
+    "south dakota", "tennessee", "texas", "utah", "vermont", "virginia",
+    "washington", "west virginia", "wisconsin", "wyoming",
+    "district of columbia", "washington dc", "washington d.c.",
+}
+
+_US_STATE_ABBRS = {
+    "al", "ak", "az", "ar", "ca", "co", "ct", "de", "fl", "ga", "hi", "id",
+    "il", "in", "ia", "ks", "ky", "la", "me", "md", "ma", "mi", "mn", "ms",
+    "mo", "mt", "ne", "nv", "nh", "nj", "nm", "ny", "nc", "nd", "oh", "ok",
+    "or", "pa", "ri", "sc", "sd", "tn", "tx", "ut", "vt", "va", "wa", "wv",
+    "wi", "wy", "dc",
+}
+
+# Regexes built once. State abbrs need word boundaries so "ca" matches
+# "San Jose, CA" but not "Canada" or "campus".
+_US_COUNTRY_RE = re.compile(
+    r"\b(united states|u\.?s\.?a\.?|u\.?s\.?|america)\b", re.I
+)
+_US_STATE_NAME_RE = re.compile(
+    r"\b(" + "|".join(re.escape(s) for s in _US_STATE_NAMES) + r")\b", re.I
+)
+_US_STATE_ABBR_RE = re.compile(
+    r"\b(" + "|".join(_US_STATE_ABBRS) + r")\b", re.I
+)
+
+
+def is_us_location(location: str) -> bool:
+    """Heuristic: does this posting location denote somewhere in the US?
+
+    Matches on: explicit country string, any US state name, any US state
+    abbreviation (word-bounded), or a bare 'remote' (most watched boards are
+    US companies, so US-remote is the common case — a deliberate tradeoff
+    that favors recall; the user can dismiss stray non-US remote roles)."""
+    if not location:
+        return False
+    loc = location.lower()
+    if _US_COUNTRY_RE.search(loc):
+        return True
+    if _US_STATE_NAME_RE.search(loc):
+        return True
+    if _US_STATE_ABBR_RE.search(loc):
+        return True
+    if "remote" in loc:
+        return True
+    return False
+
+
+def location_matches(location: str, filter_terms: list[str]) -> bool:
+    """True if the posting location satisfies any of the user's location
+    filters. Country terms ("United States") use the US heuristic; everything
+    else (cities, states) uses word-boundary substring matching for precision.
+    Empty filter_terms means 'no constraint' — caller handles that."""
+    if not filter_terms:
+        return True
+    location = location or ""
+    for raw in filter_terms:
+        term = raw.strip().lower()
+        if not term:
+            continue
+        if term in _US_COUNTRY_TERMS:
+            if is_us_location(location):
+                return True
+            continue
+        # City / state precision: expand synonyms (e.g. remote→wfh) and
+        # word-boundary match.
+        for expanded in expand_synonyms([term]):
+            if _term_regex(expanded).search(location):
+                return True
+    return False
+
 
 def expand_synonyms(terms: list[str]) -> set[str]:
     """Expand each term to its synonym group. Terms with no group pass through."""
@@ -141,11 +227,11 @@ def matches(
         if not contains_any(haystack, positives):
             return False
 
-    # Locations: any listed location must appear in the posting's location field.
-    if locations:
-        loc_terms = expand_synonyms(locations)
-        if not contains_any(location, loc_terms):
-            return False
+    # Locations: country-aware (see location_matches). Country terms like
+    # "United States" match via US state/abbr heuristic; cities/states use
+    # word-boundary precision.
+    if locations and not location_matches(location, locations):
+        return False
 
     # Job types: title must resolve to at least one of the requested types.
     if job_types:

@@ -30,6 +30,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "onboarding_completed",
             "ai_relevance_enabled",
             "ai_relevance_threshold",
+            "watchlist_digest_frequency",
         ]
 
     @staticmethod

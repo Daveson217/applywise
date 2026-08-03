@@ -77,6 +77,10 @@ class JobPosting(models.Model):
     is_reposted = models.BooleanField(default=False)
     matched_rules = models.BooleanField(default=False)
     ai_relevance_score = models.FloatField(null=True, blank=True)
+    # Matched-jobs feed + digest bookkeeping
+    matched_at = models.DateTimeField(null=True, blank=True)
+    match_dismissed = models.BooleanField(default=False)
+    match_notified = models.BooleanField(default=False)
 
     class Meta:
         unique_together = [("company", "external_id")]

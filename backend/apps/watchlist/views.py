@@ -16,6 +16,7 @@ from .models import JobPosting, WatchlistCompany, WatchlistRule
 from .serializers import (
     ATSDetectSerializer,
     JobPostingSerializer,
+    MatchedJobSerializer,
     WatchlistCompanyCreateSerializer,
     WatchlistCompanySerializer,
     WatchlistRuleSerializer,
@@ -135,6 +136,65 @@ class WatchlistPostingsView(generics.ListAPIView):
             company_id=self.kwargs["company_pk"],
             company__user=self.request.user,
         )
+
+
+class MatchedJobsView(generics.ListAPIView):
+    """The Matched Jobs feed: postings that passed the user's filters, across
+    all their companies. Excludes dismissed rows. Ordered by relevance then
+    recency."""
+
+    serializer_class = MatchedJobSerializer
+
+    def get_queryset(self):
+        return (
+            JobPosting.objects.filter(
+                company__user=self.request.user,
+                matched_rules=True,
+                match_dismissed=False,
+                is_active=True,
+            )
+            .select_related("company")
+            .order_by("-ai_relevance_score", "-matched_at")
+        )
+
+
+class MatchedJobDismissView(APIView):
+    """Dismiss (hide) a matched job from the feed."""
+
+    def post(self, request, pk):
+        try:
+            posting = JobPosting.objects.get(pk=pk, company__user=request.user)
+        except JobPosting.DoesNotExist:
+            return Response(
+                {"error": "Job not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        posting.match_dismissed = True
+        posting.save(update_fields=["match_dismissed"])
+        return Response({"dismissed": True})
+
+
+class RecheckMatchesView(APIView):
+    """Re-run matching over all existing active postings for the user's
+    companies. Use after changing filters so already-seen jobs get
+    re-evaluated (normal monitoring only checks newly-scraped postings)."""
+
+    def post(self, request):
+        from .tasks import _check_rules
+
+        companies = WatchlistCompany.objects.filter(user=request.user).prefetch_related("rules")
+        checked = 0
+        for company in companies:
+            postings = JobPosting.objects.filter(
+                company=company, is_active=True, match_dismissed=False
+            )
+            for posting in postings:
+                # Reset match state so filters can newly reject previously-matched rows.
+                posting.matched_rules = False
+                posting.matched_at = None
+                posting.save(update_fields=["matched_rules", "matched_at"])
+                _check_rules(posting, company)
+                checked += 1
+        return Response({"rechecked": checked})
 
 
 class ATSDetectView(APIView):

@@ -18,6 +18,7 @@ export interface UserProfile {
   onboarding_completed: boolean;
   ai_relevance_enabled: boolean;
   ai_relevance_threshold: number;
+  watchlist_digest_frequency: "off" | "daily" | "weekly";
 }
 
 export interface User {

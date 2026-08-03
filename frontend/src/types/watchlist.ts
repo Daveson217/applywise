@@ -42,3 +42,16 @@ export interface ATSDetectResult {
   provider: string | null;
   slug: string | null;
 }
+
+export interface MatchedJob {
+  id: number;
+  company_id: number;
+  company_name: string;
+  title: string;
+  url: string;
+  location: string;
+  ai_relevance_score: number | null;
+  matched_at: string | null;
+  first_seen_at: string;
+  match_dismissed: boolean;
+}

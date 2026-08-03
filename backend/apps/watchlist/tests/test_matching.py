@@ -4,6 +4,8 @@ from apps.watchlist.matching import (
     contains_any,
     expand_synonyms,
     infer_job_types,
+    is_us_location,
+    location_matches,
     matches,
 )
 
@@ -64,6 +66,60 @@ class TestInferJobTypes:
 
     def test_no_type(self):
         assert infer_job_types("Software Engineer") == set()
+
+
+class TestIsUSLocation:
+    def test_state_abbr(self):
+        assert is_us_location("Mountain View, CA") is True
+        assert is_us_location("Pittsburgh, PA") is True
+
+    def test_state_name(self):
+        assert is_us_location("Austin, Texas") is True
+
+    def test_explicit_country(self):
+        assert is_us_location("Remote - US") is True
+        assert is_us_location("New York, NY, USA") is True
+
+    def test_remote_treated_as_us(self):
+        assert is_us_location("Remote") is True
+
+    def test_non_us_rejected(self):
+        assert is_us_location("London, UK") is False
+        assert is_us_location("Berlin, Germany") is False
+        assert is_us_location("Toronto, Canada") is False
+
+    def test_empty(self):
+        assert is_us_location("") is False
+
+    def test_abbr_not_matched_inside_word(self):
+        # "ca" must not match inside "Canada" (word boundary).
+        assert is_us_location("Canada") is False
+
+
+class TestLocationMatches:
+    def test_country_matches_state(self):
+        assert location_matches("San Francisco, CA", ["united states"]) is True
+
+    def test_country_rejects_foreign(self):
+        assert location_matches("London, UK", ["united states"]) is False
+
+    def test_city_precision(self):
+        assert location_matches("Pittsburgh, PA", ["pittsburgh"]) is True
+        assert location_matches("Austin, TX", ["pittsburgh"]) is False
+
+    def test_state_abbr_precision(self):
+        assert location_matches("San Jose, CA", ["ca"]) is True
+        assert location_matches("Austin, TX", ["ca"]) is False
+
+    def test_remote_synonym_precision(self):
+        assert location_matches("Fully Remote", ["remote"]) is True
+
+    def test_empty_filter_is_match_all(self):
+        assert location_matches("anywhere", []) is True
+
+    def test_multiple_terms_or(self):
+        # Any one term matching is enough.
+        assert location_matches("Austin, TX", ["new york", "texas"]) is True
 
 
 class TestMatches:

@@ -71,31 +71,32 @@ class TestAIScoringGate:
         return company, posting
 
     @override_settings(PAYMENTS_ENABLED=False)
-    def test_high_score_fires_notification(self, user):
+    def test_high_score_matches(self, user):
         company, posting = self._setup(user, score_value=0.9)
         with patch("apps.watchlist.ai_scoring.score_posting", return_value=0.9):
             _check_rules(posting, company)
-        assert Notification.objects.filter(user=user).count() == 1
         posting.refresh_from_db()
+        assert posting.matched_rules is True
         assert posting.ai_relevance_score == 0.9
 
     @override_settings(PAYMENTS_ENABLED=False)
-    def test_low_score_skips_notification(self, user):
+    def test_low_score_skips_match(self, user):
         company, posting = self._setup(user, score_value=0.3)
         with patch("apps.watchlist.ai_scoring.score_posting", return_value=0.3):
             _check_rules(posting, company)
-        # Below threshold → no notification, but score IS cached.
-        assert Notification.objects.filter(user=user).count() == 0
+        # Below threshold → not matched, but score IS cached.
         posting.refresh_from_db()
+        assert posting.matched_rules is False
         assert posting.ai_relevance_score == 0.3
 
     @override_settings(PAYMENTS_ENABLED=False)
     def test_scorer_error_fails_open(self, user):
-        """LLM outage returns None → we still notify (tier-2 already passed)."""
+        """LLM outage returns None → we still match (tier-2 already passed)."""
         company, posting = self._setup(user, score_value=None)
         with patch("apps.watchlist.ai_scoring.score_posting", return_value=None):
             _check_rules(posting, company)
-        assert Notification.objects.filter(user=user).count() == 1
+        posting.refresh_from_db()
+        assert posting.matched_rules is True
 
     @override_settings(PAYMENTS_ENABLED=False)
     def test_scorer_not_called_when_opted_out(self, user):
@@ -112,4 +113,5 @@ class TestAIScoringGate:
         with patch("apps.watchlist.ai_scoring.score_posting") as mock_score:
             _check_rules(posting, company)
         mock_score.assert_not_called()
-        assert Notification.objects.filter(user=user).count() == 1
+        posting.refresh_from_db()
+        assert posting.matched_rules is True

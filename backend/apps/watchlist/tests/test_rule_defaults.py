@@ -1,8 +1,12 @@
-"""Integration tests for _check_rules profile-defaults fallback."""
+"""Integration tests for _check_rules profile-defaults fallback.
+
+_check_rules now FLAGS matches (matched_rules / matched_at) rather than
+creating a Notification per job — emails are batched by the digest task.
+So these assert on the posting's matched_rules flag.
+"""
 
 import pytest
 
-from apps.notifications.models import Notification
 from apps.watchlist.models import JobPosting, WatchlistCompany, WatchlistRule
 from apps.watchlist.tasks import _check_rules
 
@@ -17,17 +21,22 @@ def _make_posting(company, title="Software Engineer", location="Remote"):
     )
 
 
+def _matched(posting) -> bool:
+    posting.refresh_from_db()
+    return posting.matched_rules
+
+
 @pytest.mark.django_db
 class TestProfileDefaultsFallback:
-    def test_no_rules_no_profile_defaults_no_notification(self, user):
-        """A company with no rules and a user with an empty profile should
-        never fire a notification (avoid spamming with everything)."""
+    def test_no_rules_no_profile_defaults_no_match(self, user):
+        """A company with no rules and an empty profile should never match
+        (avoid flagging everything)."""
         company = WatchlistCompany.objects.create(user=user, name="Acme")
         posting = _make_posting(company, title="Marketing Manager")
 
         _check_rules(posting, company)
 
-        assert Notification.objects.count() == 0
+        assert _matched(posting) is False
 
     def test_no_rules_uses_profile_defaults(self, user):
         """When a company has no rules, matching falls through to profile
@@ -43,9 +52,8 @@ class TestProfileDefaultsFallback:
         _check_rules(matching, company)
         _check_rules(non_matching, company)
 
-        notifs = Notification.objects.filter(user=user)
-        assert notifs.count() == 1
-        assert "Machine Learning Intern" in notifs.first().title
+        assert _matched(matching) is True
+        assert _matched(non_matching) is False
 
     def test_rule_empty_field_falls_back_to_profile(self, user):
         """If a rule has no keywords but the profile does, use the profile's."""
@@ -59,7 +67,7 @@ class TestProfileDefaultsFallback:
         posting = _make_posting(company, title="ML Engineer", location="Remote")
         _check_rules(posting, company)
 
-        assert Notification.objects.filter(user=user).count() == 1
+        assert _matched(posting) is True
 
     def test_rule_field_overrides_profile(self, user):
         """A non-empty rule field wins over the profile default."""
@@ -76,9 +84,8 @@ class TestProfileDefaultsFallback:
         _check_rules(matching, company)
         _check_rules(non_matching, company)
 
-        notifs = Notification.objects.filter(user=user)
-        assert notifs.count() == 1
-        assert "Backend Engineer" in notifs.first().title
+        assert _matched(matching) is True
+        assert _matched(non_matching) is False
 
     def test_profile_excludes_always_apply(self, user):
         """Excludes from the profile should apply on top of any rule — a rule
@@ -95,9 +102,8 @@ class TestProfileDefaultsFallback:
         _check_rules(junior, company)
         _check_rules(senior, company)
 
-        notifs = Notification.objects.filter(user=user)
-        assert notifs.count() == 1
-        assert "Junior" in notifs.first().title
+        assert _matched(junior) is True
+        assert _matched(senior) is False
 
     def test_profile_defaults_respect_synonyms(self, user):
         """Profile-driven matching still uses the synonym expansion."""
@@ -109,4 +115,4 @@ class TestProfileDefaultsFallback:
 
         _check_rules(posting, company)
 
-        assert Notification.objects.filter(user=user).count() == 1
+        assert _matched(posting) is True

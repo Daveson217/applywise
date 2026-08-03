@@ -75,6 +75,12 @@ class UserProfile(models.Model):
     onboarding_completed = models.BooleanField(default=False)
     ai_relevance_enabled = models.BooleanField(default=False)
     ai_relevance_threshold = models.FloatField(default=0.6)
+    watchlist_digest_frequency = models.CharField(
+        max_length=10,
+        choices=[("off", "Off"), ("daily", "Daily"), ("weekly", "Weekly")],
+        default="daily",
+    )
+    watchlist_digest_last_sent = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Profile: {self.user.email}"
