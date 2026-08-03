@@ -105,7 +105,10 @@ class AIGeneration(models.Model):
     class Meta:
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["user", "feature", "-created_at"]),
+            models.Index(
+                fields=["user", "feature", "-created_at"],
+                name="ai_gen_user_feat_created_idx",
+            ),
         ]
 
     def __str__(self):
