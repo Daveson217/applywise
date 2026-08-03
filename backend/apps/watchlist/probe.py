@@ -20,40 +20,74 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import httpx
 
 logger = logging.getLogger(__name__)
 
-# Per-provider: (name, board-page URL template, API check URL template).
+
+def _default_ok(resp: httpx.Response) -> bool:
+    """Any 200 counts. Fine for providers whose API 404s on invalid slugs."""
+    return resp.status_code == 200
+
+
+def _smartrecruiters_ok(resp: httpx.Response) -> bool:
+    """SmartRecruiters returns 200 with a valid-shaped empty response even
+    for tenants that don't exist — the public careers URL then redirects
+    such slugs to their homepage. Require the JSON body to actually contain
+    postings so we don't save phantom matches.
+
+    Tradeoff: real tenants with zero open reqs won't match. Acceptable —
+    there's nothing to notify about anyway."""
+    if resp.status_code != 200:
+        return False
+    try:
+        data = resp.json()
+    except ValueError:
+        return False
+    if not isinstance(data, dict):
+        return False
+    if data.get("totalFound"):
+        return True
+    content = data.get("content")
+    return isinstance(content, list) and len(content) > 0
+
+
+# Per-provider: (name, board URL template, probe URL template, validator).
 # board_url is what we save to careers_url and show to the user.
-# probe_url is what we HEAD/GET to test whether the slug exists.
-_PROBES: list[tuple[str, str, str]] = [
+# probe_url is what we GET; validator inspects the response.
+_PROBES: list[tuple[str, str, str, Callable[[httpx.Response], bool]]] = [
     (
         "greenhouse",
         "https://boards.greenhouse.io/{slug}",
         "https://boards-api.greenhouse.io/v1/boards/{slug}/jobs",
+        _default_ok,
     ),
     (
         "lever",
         "https://jobs.lever.co/{slug}",
         "https://api.lever.co/v0/postings/{slug}",
+        _default_ok,
     ),
     (
         "ashby",
         "https://jobs.ashbyhq.com/{slug}",
         "https://api.ashbyhq.com/posting-api/job-board/{slug}",
+        _default_ok,
     ),
     (
         "workable",
         "https://apply.workable.com/{slug}",
         "https://apply.workable.com/api/v3/accounts/{slug}/jobs",
+        _default_ok,
     ),
     (
         "smartrecruiters",
         "https://careers.smartrecruiters.com/{slug}",
         "https://api.smartrecruiters.com/v1/companies/{slug}/postings",
+        _smartrecruiters_ok,
     ),
 ]
 
@@ -108,13 +142,13 @@ def _slug_candidates(name: str) -> list[str]:
 
 def _probe_slug(client: httpx.Client, slug: str) -> ProbeResult | None:
     """Try each ATS for one slug. Returns the first hit or None."""
-    for provider, board_tpl, probe_tpl in _PROBES:
+    for provider, board_tpl, probe_tpl, validator in _PROBES:
         try:
             resp = client.get(probe_tpl.format(slug=slug))
         except (httpx.RequestError, httpx.TimeoutException) as exc:
             logger.debug(f"Probe error for {provider}/{slug}: {exc}")
             continue
-        if resp.status_code == 200:
+        if validator(resp):
             return ProbeResult(
                 provider=provider,
                 slug=slug,

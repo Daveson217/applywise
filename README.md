@@ -2,6 +2,18 @@
 
 AI-powered job application tracker for students and early-career professionals.
 
+## Features
+
+- **Application tracking** — kanban board, tags, activity log, CSV import/export, bulk actions.
+- **Watchlist** — monitor company career pages for new postings. Supports Greenhouse, Lever, Ashby, Workable, SmartRecruiters; auto-detects the ATS from a URL or by probing the company name. CSV/XLSX import for bulk company adds.
+- **Smart job alerts** — profile-level defaults (target roles, excluded keywords, job types, locations) with per-company rule overrides. Word-boundary + synonym matcher ("ML" also matches "Machine Learning"). Optional AI relevance scoring (Pro) as a second-pass semantic filter with a user-adjustable threshold.
+- **AI assistant** — multi-provider cover letter generation (SSE streaming), ATS/fit scoring, Q&A, resume analysis.
+- **CV manager** — versioned uploads (PDF/DOCX), R2 storage in prod.
+- **Networking tracker** — contacts, coffee chats, follow-ups.
+- **Auth** — email/password with password reset + change, Google & LinkedIn OAuth, JWT with refresh-token rotation & blacklisting.
+- **SaaS** — Stripe billing, quota enforcement, `PAYMENTS_ENABLED=False` unlocks everything for testing.
+- **UX** — command palette, keyboard shortcuts, heatmap, mobile nav, dark mode.
+
 ## Tech Stack
 
 - **Backend:** Django 5, Django REST Framework, PostgreSQL, Redis, Celery

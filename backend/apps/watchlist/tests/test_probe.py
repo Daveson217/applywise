@@ -33,9 +33,12 @@ class TestSlugCandidates:
         assert len(cands) == len(set(cands))
 
 
-def _mock_response(status_code=200):
+def _mock_response(status_code=200, json_data=None):
     resp = MagicMock()
     resp.status_code = status_code
+    # Default: an empty dict — for the default validator (status-code-only)
+    # this is irrelevant. For SR's validator it's an explicit "no postings".
+    resp.json.return_value = json_data if json_data is not None else {}
     return resp
 
 
@@ -83,6 +86,48 @@ class TestProbeByName:
             ]
             result = probe_by_name("Anthropic")
             assert result is not None
+
+    def test_smartrecruiters_empty_response_rejected(self):
+        """Regression: SR returns 200 with empty postings for invalid tenants.
+        We must NOT treat that as a match."""
+        with patch("apps.watchlist.probe.httpx.Client") as mock_client_cls:
+            client = MagicMock()
+            mock_client_cls.return_value.__enter__.return_value = client
+            # First 4 providers 404 → falls through to SR → SR returns 200
+            # with a valid-shaped but empty body → must be rejected.
+            client.get.side_effect = [
+                _mock_response(404),  # greenhouse
+                _mock_response(404),  # lever
+                _mock_response(404),  # ashby
+                _mock_response(404),  # workable
+                _mock_response(200, {"totalFound": 0, "content": []}),  # SR empty
+                # Same again for second slug candidate
+                _mock_response(404),
+                _mock_response(404),
+                _mock_response(404),
+                _mock_response(404),
+                _mock_response(200, {"totalFound": 0, "content": []}),
+            ]
+            assert probe_by_name("Notion") is None
+
+    def test_smartrecruiters_real_hit_accepted(self):
+        """SR match with actual postings should still be accepted."""
+        with patch("apps.watchlist.probe.httpx.Client") as mock_client_cls:
+            client = MagicMock()
+            mock_client_cls.return_value.__enter__.return_value = client
+            client.get.side_effect = [
+                _mock_response(404),  # greenhouse
+                _mock_response(404),  # lever
+                _mock_response(404),  # ashby
+                _mock_response(404),  # workable
+                _mock_response(
+                    200,
+                    {"totalFound": 12, "content": [{"id": "x", "name": "Y"}]},
+                ),
+            ]
+            result = probe_by_name("Bosch")
+            assert result is not None
+            assert result.provider == "smartrecruiters"
 
 
 @pytest.mark.django_db
