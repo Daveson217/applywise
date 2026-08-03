@@ -47,6 +47,7 @@ class SSERenderer(BaseRenderer):
         # Not used; the view streams via StreamingHttpResponse.
         return data
 
+
 # ─── SSE stream auth ─────────────────────────────────────────────────────
 # EventSource can't send Authorization headers, so the SSE endpoint can't
 # use normal JWT auth. Instead the POST that creates a task returns a
