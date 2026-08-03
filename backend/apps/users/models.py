@@ -71,7 +71,7 @@ class UserProfile(models.Model):
     default_llm_provider = models.CharField(
         max_length=20, choices=PROVIDER_CHOICES, default="gemini"
     )
-    default_llm_model = models.CharField(max_length=50, default="gemini-2.5-flash")
+    default_llm_model = models.CharField(max_length=50, default="gemini-3.5-flash-lite")
     onboarding_completed = models.BooleanField(default=False)
     ai_relevance_enabled = models.BooleanField(default=False)
     ai_relevance_threshold = models.FloatField(default=0.6)

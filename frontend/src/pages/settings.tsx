@@ -1,5 +1,6 @@
 import { Separator } from "@/components/ui/separator";
 import { AccountSettings } from "@/features/settings/components/account-settings";
+import { AIModelSettings } from "@/features/settings/components/ai-model-settings";
 import { AppearanceSettings } from "@/features/settings/components/appearance-settings";
 import { JobPreferences } from "@/features/settings/components/job-preferences";
 import { ProfileForm } from "@/features/settings/components/profile-form";
@@ -10,6 +11,7 @@ import { useState } from "react";
 const tabs = [
   { id: "profile", label: "Profile" },
   { id: "job-preferences", label: "Job Preferences" },
+  { id: "ai-model", label: "AI Model" },
   { id: "appearance", label: "Appearance" },
   { id: "usage", label: "Usage & Plan" },
   { id: "account", label: "Account" },
@@ -50,6 +52,7 @@ export function SettingsPage() {
 
       {activeTab === "profile" && <ProfileForm />}
       {activeTab === "job-preferences" && <JobPreferences />}
+      {activeTab === "ai-model" && <AIModelSettings />}
       {activeTab === "appearance" && <AppearanceSettings />}
       {activeTab === "usage" && <UsagePanel />}
       {activeTab === "account" && <AccountSettings />}

@@ -5,9 +5,15 @@ from .base import LLMProvider, LLMResponse
 
 class GeminiProvider(LLMProvider):
     name = "gemini"
-    models = ["gemini-2.5-flash", "gemini-2.0-pro"]
+    models = [
+        "gemini-3.5-flash-lite",
+        "gemini-2.5-flash-lite",
+        "gemini-2.5-pro",
+        "gemini-2.5-flash",
+        "gemini-2.0-pro",
+    ]
 
-    def __init__(self, model: str = "gemini-2.5-flash"):
+    def __init__(self, model: str = "gemini-3.5-flash-lite"):
         self.model = model
 
     async def generate(self, prompt: str, context: dict, **kwargs) -> LLMResponse:
