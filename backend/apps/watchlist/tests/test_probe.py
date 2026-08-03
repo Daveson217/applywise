@@ -143,7 +143,7 @@ class TestProbeEndpoint:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_hit_returns_detected(self, authenticated_client):
-        with patch("apps.watchlist.views.probe_by_name") as mock:
+        with patch("apps.watchlist.probe.probe_by_name") as mock:
             from apps.watchlist.probe import ProbeResult
 
             mock.return_value = ProbeResult(
@@ -158,7 +158,7 @@ class TestProbeEndpoint:
         assert response.data["slug"] == "stripe"
 
     def test_miss_returns_not_detected(self, authenticated_client):
-        with patch("apps.watchlist.views.probe_by_name", return_value=None):
+        with patch("apps.watchlist.probe.probe_by_name", return_value=None):
             response = authenticated_client.post(self.URL, {"name": "Nonesuch"})
         assert response.status_code == status.HTTP_200_OK
         assert response.data["detected"] is False
@@ -169,7 +169,7 @@ class TestCreateWithProbeFallback:
     def test_create_probes_when_url_unmatched(self, authenticated_client, user):
         from apps.watchlist.probe import ProbeResult
 
-        with patch("apps.watchlist.views.probe_by_name") as mock:
+        with patch("apps.watchlist.probe.probe_by_name") as mock:
             mock.return_value = ProbeResult(
                 provider="greenhouse",
                 slug="stripe",
@@ -187,7 +187,7 @@ class TestCreateWithProbeFallback:
 
     def test_create_skips_probe_when_url_matches(self, authenticated_client, user):
         # URL alone tells us everything — probe should not be called.
-        with patch("apps.watchlist.views.probe_by_name") as mock:
+        with patch("apps.watchlist.probe.probe_by_name") as mock:
             response = authenticated_client.post(
                 "/api/watchlist/",
                 {
