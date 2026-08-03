@@ -10,21 +10,6 @@ from rest_framework.renderers import BaseRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-
-class SSERenderer(BaseRenderer):
-    """Content-negotiation shim for EventSource. Without this, DRF returns
-    406 Not Acceptable because its default renderers (JSON, BrowsableAPI)
-    don't match the `Accept: text/event-stream` header the browser sends.
-    We never actually render through this — the view returns a
-    StreamingHttpResponse directly."""
-
-    media_type = "text/event-stream"
-    format = "sse"
-
-    def render(self, data, accepted_media_type=None, renderer_context=None):
-        # Not used; the view streams via StreamingHttpResponse.
-        return data
-
 from apps.applications.models import CVVersion
 from apps.billing.quotas import (
     check_provider_allowed,
@@ -46,6 +31,21 @@ from .tasks import (
     generate_cover_letter,
     generate_qa_answer,
 )
+
+
+class SSERenderer(BaseRenderer):
+    """Content-negotiation shim for EventSource. Without this, DRF returns
+    406 Not Acceptable because its default renderers (JSON, BrowsableAPI)
+    don't match the `Accept: text/event-stream` header the browser sends.
+    We never actually render through this — the view returns a
+    StreamingHttpResponse directly."""
+
+    media_type = "text/event-stream"
+    format = "sse"
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        # Not used; the view streams via StreamingHttpResponse.
+        return data
 
 # ─── SSE stream auth ─────────────────────────────────────────────────────
 # EventSource can't send Authorization headers, so the SSE endpoint can't
