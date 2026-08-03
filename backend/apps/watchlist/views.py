@@ -165,9 +165,7 @@ class MatchedJobDismissView(APIView):
         try:
             posting = JobPosting.objects.get(pk=pk, company__user=request.user)
         except JobPosting.DoesNotExist:
-            return Response(
-                {"error": "Job not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Job not found"}, status=status.HTTP_404_NOT_FOUND)
         posting.match_dismissed = True
         posting.save(update_fields=["match_dismissed"])
         return Response({"dismissed": True})

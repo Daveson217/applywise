@@ -348,7 +348,7 @@ def _send_digest_email(user, postings):
         f'max-width:560px;margin:24px auto;color:#111">'
         f'<h2 style="margin:0 0 12px">{len(postings)} new job match'
         f"{'es' if len(postings) != 1 else ''}</h2>"
-        f'<p>Hi {escape(user.first_name or "there")}, here are the latest roles '
+        f"<p>Hi {escape(user.first_name or 'there')}, here are the latest roles "
         f"matching your watchlist alerts:</p>"
         f'<ul style="list-style:none;padding:0">{"".join(rows)}</ul>'
         f'<p><a href="{escape(feed_url)}" style="display:inline-block;background:#3B82F6;'

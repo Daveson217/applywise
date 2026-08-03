@@ -69,6 +69,7 @@ _JOB_TYPE_PATTERNS: dict[str, re.Pattern] = {
 # Terms a user might type to mean "anywhere in the US".
 _US_COUNTRY_TERMS = {"united states", "usa", "us", "u.s.", "u.s.a.", "america"}
 
+# fmt: off
 _US_STATE_NAMES = {
     "alabama", "alaska", "arizona", "arkansas", "california", "colorado",
     "connecticut", "delaware", "florida", "georgia", "hawaii", "idaho",
@@ -89,18 +90,15 @@ _US_STATE_ABBRS = {
     "or", "pa", "ri", "sc", "sd", "tn", "tx", "ut", "vt", "va", "wa", "wv",
     "wi", "wy", "dc",
 }
+# fmt: on
 
 # Regexes built once. State abbrs need word boundaries so "ca" matches
 # "San Jose, CA" but not "Canada" or "campus".
-_US_COUNTRY_RE = re.compile(
-    r"\b(united states|u\.?s\.?a\.?|u\.?s\.?|america)\b", re.I
-)
+_US_COUNTRY_RE = re.compile(r"\b(united states|u\.?s\.?a\.?|u\.?s\.?|america)\b", re.I)
 _US_STATE_NAME_RE = re.compile(
     r"\b(" + "|".join(re.escape(s) for s in _US_STATE_NAMES) + r")\b", re.I
 )
-_US_STATE_ABBR_RE = re.compile(
-    r"\b(" + "|".join(_US_STATE_ABBRS) + r")\b", re.I
-)
+_US_STATE_ABBR_RE = re.compile(r"\b(" + "|".join(_US_STATE_ABBRS) + r")\b", re.I)
 
 
 def is_us_location(location: str) -> bool:
