@@ -27,7 +27,11 @@ PLAN_LIMITS = {
         "allowed_providers": [
             "gemini",
         ],
-        "allowed_models": ["gemini-2.5-flash"],
+        "allowed_models": [
+            "gemini-3.5-flash-lite",
+            "gemini-2.5-flash-lite",
+            "gemini-2.5-flash",
+        ],
         "csv_export": False,
         "sms_notifications": False,
         "offer_comparison": False,
