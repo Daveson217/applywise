@@ -22,12 +22,17 @@ from .serializers import (
 )
 
 
-def _detect_and_apply_ats(company):
+def _detect_and_apply_ats(company, *, force: bool = False):
     """Best-effort: try URL-based detection first, then name-based probe.
     Silently no-op if neither works — the row just stays unscheduled.
-    Called on create and on update; safe to call repeatedly."""
-    if company.ats_provider:
-        return  # already detected; user can clear it manually if wrong
+    Called on create and on update; safe to call repeatedly.
+
+    `force=True` re-runs detection even if the company already has an ATS
+    set. Use on edit so a URL change from Greenhouse → Lever (or a fix to a
+    bad slug) is picked up.
+    """
+    if company.ats_provider and not force:
+        return
 
     # 1) URL-based (fast, no HTTP).
     if company.careers_url:
@@ -51,6 +56,13 @@ def _detect_and_apply_ats(company):
             company.careers_url = probed.board_url
             update_fields.append("careers_url")
         company.save(update_fields=update_fields)
+    elif force:
+        # Re-detection asked but nothing matched — clear stale ATS data so
+        # the "Not scraping" badge shows and the user isn't misled.
+        if company.ats_provider or company.ats_company_slug:
+            company.ats_provider = ""
+            company.ats_company_slug = ""
+            company.save(update_fields=["ats_provider", "ats_company_slug"])
 
 
 class WatchlistCompanyViewSet(viewsets.ModelViewSet):
@@ -95,10 +107,10 @@ class WatchlistCompanyViewSet(viewsets.ModelViewSet):
         return Response(output_serializer.data, status=status.HTTP_201_CREATED)
 
     def perform_update(self, serializer):
-        # Re-run ATS detection if the URL changed. Also try the name-based
-        # probe fallback so an edit can "fix" a previously-unmatched entry.
+        # Re-run ATS detection unconditionally on edit — the user may have
+        # changed the URL to a different provider or fixed a bad slug.
         company = serializer.save()
-        _detect_and_apply_ats(company)
+        _detect_and_apply_ats(company, force=True)
 
 
 class WatchlistRuleViewSet(viewsets.ModelViewSet):
