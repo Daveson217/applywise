@@ -118,8 +118,10 @@ class TestLocationMatches:
         assert location_matches("anywhere", []) is True
 
     def test_multiple_terms_or(self):
-        # Any one term matching is enough.
-        assert location_matches("Austin, TX", ["new york", "texas"]) is True
+        # Any one term matching is enough. City/state precision is substring,
+        # so "tx" matches "Austin, TX" (state name↔abbr are not cross-mapped).
+        assert location_matches("Austin, TX", ["new york", "tx"]) is True
+        assert location_matches("New York, NY", ["new york", "boston"]) is True
 
 
 class TestMatches:

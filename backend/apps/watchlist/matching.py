@@ -119,9 +119,7 @@ def is_us_location(location: str) -> bool:
         return True
     if _US_STATE_ABBR_RE.search(loc):
         return True
-    if "remote" in loc:
-        return True
-    return False
+    return "remote" in loc
 
 
 def location_matches(location: str, filter_terms: list[str]) -> bool:

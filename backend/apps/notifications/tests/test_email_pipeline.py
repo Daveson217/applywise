@@ -11,8 +11,11 @@ from apps.watchlist.tasks import _check_rules
 
 
 @pytest.mark.django_db
-class TestWatchlistTriggersNotification:
-    def test_matched_rule_creates_notification(self, user, django_capture_on_commit_callbacks):
+class TestWatchlistFlagsMatches:
+    """_check_rules flags matches (matched_rules) for the feed; it no longer
+    emails per job — the digest task batches emails separately."""
+
+    def test_matched_rule_flags_posting(self, user):
         company = WatchlistCompany.objects.create(
             user=user, name="Stripe", ats_provider="greenhouse"
         )
@@ -30,21 +33,18 @@ class TestWatchlistTriggersNotification:
             location="Remote",
         )
 
+        # No per-job email should be enqueued anymore.
         with patch("apps.notifications.tasks.send_notification_email.delay") as mock_send:
-            # Capture and execute on_commit callbacks so we can assert they ran
-            with django_capture_on_commit_callbacks(execute=True):
-                _check_rules(posting, company)
+            _check_rules(posting, company)
 
-        notif = Notification.objects.filter(user=user, type="job_alert").first()
-        assert notif is not None
-        assert "Stripe" in notif.title
-        assert "Software Engineer Intern" in notif.title
-        # Posting ID now lives in structured metadata, not free-text body
-        assert notif.metadata.get("posting_id") == posting.id
-        # Signal fires the email task post-commit
-        mock_send.assert_called_once_with(notif.id)
+        posting.refresh_from_db()
+        assert posting.matched_rules is True
+        assert posting.matched_at is not None
+        # No Notification and no email at match time (digest handles it).
+        assert Notification.objects.filter(user=user).count() == 0
+        mock_send.assert_not_called()
 
-    def test_unmatched_rule_creates_nothing(self, user):
+    def test_unmatched_rule_flags_nothing(self, user):
         company = WatchlistCompany.objects.create(
             user=user, name="Stripe", ats_provider="greenhouse"
         )
@@ -61,13 +61,13 @@ class TestWatchlistTriggersNotification:
             url="https://example.com/job/123",
         )
 
-        with patch("apps.notifications.tasks.send_notification_email.delay") as mock_send:
-            _check_rules(posting, company)
+        _check_rules(posting, company)
 
+        posting.refresh_from_db()
+        assert posting.matched_rules is False
         assert Notification.objects.filter(user=user).count() == 0
-        mock_send.assert_not_called()
 
-    def test_no_rules_skips_notification(self, user):
+    def test_no_rules_no_profile_flags_nothing(self, user):
         company = WatchlistCompany.objects.create(
             user=user, name="Stripe", ats_provider="greenhouse"
         )
@@ -78,13 +78,12 @@ class TestWatchlistTriggersNotification:
             url="https://example.com/job/123",
         )
 
-        with patch("apps.notifications.tasks.send_notification_email.delay") as mock_send:
-            _check_rules(posting, company)
+        _check_rules(posting, company)
 
-        assert Notification.objects.filter(user=user).count() == 0
-        mock_send.assert_not_called()
+        posting.refresh_from_db()
+        assert posting.matched_rules is False
 
-    def test_only_first_matching_rule_fires(self, user):
+    def test_matches_once_across_multiple_rules(self, user):
         company = WatchlistCompany.objects.create(
             user=user, name="Stripe", ats_provider="greenhouse"
         )
@@ -97,18 +96,10 @@ class TestWatchlistTriggersNotification:
             url="https://example.com/job/123",
         )
 
-        with patch("apps.notifications.tasks.send_notification_email.delay") as mock_send:
-            from django.db import transaction
+        _check_rules(posting, company)
 
-            with transaction.atomic():
-                _check_rules(posting, company)
-            # Manually fire on_commit hooks queued in the atomic block above
-            for callback in transaction.get_connection().run_on_commit:
-                callback[1]()
-
-        # Both rules match but we only create one notification
-        assert Notification.objects.filter(user=user).count() == 1
-        assert mock_send.call_count == 1
+        posting.refresh_from_db()
+        assert posting.matched_rules is True
 
 
 @pytest.mark.django_db
