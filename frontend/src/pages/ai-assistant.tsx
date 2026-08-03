@@ -1,4 +1,6 @@
 import { CoverLetterForm } from "@/features/ai/components/cover-letter-form";
+import { CoverLetterHistory } from "@/features/ai/components/cover-letter-history";
+import { GenerationHistory } from "@/features/ai/components/generation-history";
 import { QAForm } from "@/features/ai/components/qa-form";
 import {
   ATSScoreForm,
@@ -45,10 +47,30 @@ export function AIAssistantPage() {
         ))}
       </div>
 
-      {activeTab === "cover-letter" && <CoverLetterForm />}
-      {activeTab === "qa" && <QAForm />}
-      {activeTab === "fit-score" && <FitScoreForm />}
-      {activeTab === "ats-score" && <ATSScoreForm />}
+      {activeTab === "cover-letter" && (
+        <div className="space-y-6">
+          <CoverLetterForm />
+          <CoverLetterHistory />
+        </div>
+      )}
+      {activeTab === "qa" && (
+        <div className="space-y-6">
+          <QAForm />
+          <GenerationHistory feature="qa" />
+        </div>
+      )}
+      {activeTab === "fit-score" && (
+        <div className="space-y-6">
+          <FitScoreForm />
+          <GenerationHistory feature="fit_score" />
+        </div>
+      )}
+      {activeTab === "ats-score" && (
+        <div className="space-y-6">
+          <ATSScoreForm />
+          <GenerationHistory feature="ats_score" />
+        </div>
+      )}
     </div>
   );
 }

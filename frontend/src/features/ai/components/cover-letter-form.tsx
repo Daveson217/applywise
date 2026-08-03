@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useCVVersions } from "@/features/cv/hooks";
 import { CheckCircle, Loader2, Sparkles } from "lucide-react";
 import { useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useUsage } from "@/features/billing/usage-api";
 
@@ -23,6 +24,7 @@ export function CoverLetterForm() {
   const { data: cvData } = useCVVersions();
   const { data: usage } = useUsage();
   const generateMutation = useGenerateCoverLetter();
+  const queryClient = useQueryClient();
 
   const [company, setCompany] = useState("");
   const [jobTitle, setJobTitle] = useState("");
@@ -58,6 +60,8 @@ export function CoverLetterForm() {
           setStreaming(false);
           setDone(true);
           es.close();
+          // A new CoverLetter row was created server-side; refresh history.
+          queryClient.invalidateQueries({ queryKey: ["ai", "cover-letters"] });
         }
       } catch {
         // ignore parse errors

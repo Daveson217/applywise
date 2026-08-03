@@ -64,6 +64,9 @@ export const aiApi = {
   listCoverLetters: () =>
     api.get<PaginatedResponse<CoverLetter>>("/ai/cover-letters/"),
 
+  deleteCoverLetter: (id: number) =>
+    api.delete(`/ai/cover-letters/${id}/`),
+
   answerQuestion: (data: {
     question: string;
     cv_version_id: number;
@@ -101,4 +104,23 @@ export const aiApi = {
       result?: Record<string, unknown>;
       error?: string;
     }>(`/ai/task/${taskId}/`),
+
+  listGenerations: (feature?: "qa" | "fit_score" | "ats_score") =>
+    api.get<PaginatedResponse<AIGeneration>>(
+      `/ai/generations/${feature ? `?feature=${feature}` : ""}`
+    ),
+
+  deleteGeneration: (id: number) =>
+    api.delete(`/ai/generations/${id}/`),
 };
+
+export interface AIGeneration {
+  id: number;
+  feature: "qa" | "fit_score" | "ats_score";
+  title: string;
+  input: Record<string, unknown>;
+  result: Record<string, unknown>;
+  provider: string;
+  model: string;
+  created_at: string;
+}

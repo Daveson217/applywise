@@ -1,4 +1,5 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 import { aiApi } from "./api";
 
@@ -42,24 +43,57 @@ export function useComputeATSScore() {
 }
 
 export function useTaskResult(taskId: string | null) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const query = useQuery({
     queryKey: ["ai", "task", taskId],
     queryFn: () => aiApi.getTaskResult(taskId!).then((r) => r.data),
     enabled: !!taskId,
     // Poll every 2s while pending; stop once we have a terminal state.
-    refetchInterval: (query) => {
-      const data = query.state.data;
+    refetchInterval: (q) => {
+      const data = q.state.data;
       if (!data) return 2000;
       return data.status === "pending" ? 2000 : false;
     },
     // Don't cache a stale result under the same taskId if the user resubmits.
     gcTime: 0,
   });
+
+  // When a task succeeds, refresh any AI history lists so the new row shows up.
+  useEffect(() => {
+    if (query.data?.status === "success") {
+      queryClient.invalidateQueries({ queryKey: ["ai", "generations"] });
+    }
+  }, [query.data?.status, queryClient]);
+
+  return query;
 }
 
 export function useAIUsage() {
   return useQuery({
     queryKey: ["ai", "usage"],
     queryFn: () => aiApi.getUsage().then((r) => r.data),
+  });
+}
+
+export function useDeleteCoverLetter() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => aiApi.deleteCoverLetter(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ai", "cover-letters"] });
+    },
+  });
+}
+
+export function useGenerations(feature?: "qa" | "fit_score" | "ats_score") {
+  return useQuery({
+    queryKey: ["ai", "generations", feature ?? "all"],
+    queryFn: () => aiApi.listGenerations(feature).then((r) => r.data),
+  });
+}
+
+export function useDeleteGeneration() {
+  return useMutation({
+    mutationFn: (id: number) => aiApi.deleteGeneration(id),
   });
 }

@@ -1,12 +1,13 @@
 import asyncio
 import json
 import logging
+import re
 
 from celery import shared_task
 
 from llm_providers.registry import get_llm_provider
 
-from .models import AIUsageLog, CoverLetter
+from .models import AIGeneration, AIUsageLog, CoverLetter
 from .prompts import (
     ATS_SCORE_PROMPT,
     ATS_SCORE_SYSTEM,
@@ -21,6 +22,31 @@ from .prompts import (
 logger = logging.getLogger(__name__)
 
 LENGTH_MAP = {"brief": "250 words", "standard": "400 words", "detailed": "600 words"}
+
+
+def _extract_json(text: str) -> dict | None:
+    """Robustly pull a JSON object out of an LLM response. Handles code
+    fences (```json ... ```), preamble text, and trailing prose.
+    Returns None if nothing usable is found."""
+    if not text:
+        return None
+    # Strip markdown code fences if present.
+    cleaned = re.sub(r"```(?:json)?\s*|\s*```", "", text).strip()
+    # Direct parse first.
+    try:
+        data = json.loads(cleaned)
+        return data if isinstance(data, dict) else None
+    except json.JSONDecodeError:
+        pass
+    # Fallback: find the first balanced {...} block. Greedy on outer braces.
+    match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+    if not match:
+        return None
+    try:
+        data = json.loads(match.group(0))
+        return data if isinstance(data, dict) else None
+    except json.JSONDecodeError:
+        return None
 
 
 def _publish_chunk(task_id: str, chunk: str, done: bool = False):
@@ -201,7 +227,17 @@ def generate_qa_answer(
                 output_tokens=response.output_tokens,
             )
 
-        return {"answer": response.text}
+        result = {"answer": response.text}
+        AIGeneration.objects.create(
+            user_id=user_id,
+            feature="qa",
+            title=question[:200],
+            input={"question": question, "job_context": job_context},
+            result=result,
+            provider=response.provider,
+            model=response.model,
+        )
+        return result
 
     except Exception as exc:
         if reservation_id:
@@ -242,11 +278,28 @@ def compute_fit_score(
             output_tokens=response.output_tokens,
         )
 
-        try:
-            result = json.loads(response.text)
-        except json.JSONDecodeError:
-            result = {"score": 0, "strengths": [], "gaps": [], "recommendation": response.text}
+        parsed = _extract_json(response.text)
+        if parsed is None:
+            # Couldn't get structured output — surface the raw text so the
+            # user sees something useful instead of a hardcoded zero.
+            result = {
+                "score": 0,
+                "strengths": [],
+                "gaps": [],
+                "recommendation": response.text,
+            }
+        else:
+            result = parsed
 
+        AIGeneration.objects.create(
+            user_id=user_id,
+            feature="fit_score",
+            title=(f"{job_title} @ {company}" if job_title or company else "Fit score")[:200],
+            input={"company": company, "job_title": job_title, "job_description": job_description},
+            result=result,
+            provider=response.provider,
+            model=response.model,
+        )
         return result
 
     except Exception as exc:
@@ -297,11 +350,26 @@ def compute_ats_score(
                 output_tokens=response.output_tokens,
             )
 
-        try:
-            result = json.loads(response.text)
-        except json.JSONDecodeError:
-            result = {"score": 0, "matched_keywords": [], "missing_keywords": [], "suggestions": []}
+        parsed = _extract_json(response.text)
+        if parsed is None:
+            result = {
+                "score": 0,
+                "matched_keywords": [],
+                "missing_keywords": [],
+                "suggestions": [response.text],  # surface the raw text at least
+            }
+        else:
+            result = parsed
 
+        AIGeneration.objects.create(
+            user_id=user_id,
+            feature="ats_score",
+            title=(job_description[:120] + "…") if len(job_description) > 120 else job_description,
+            input={"job_description": job_description},
+            result=result,
+            provider=response.provider,
+            model=response.model,
+        )
         return result
 
     except Exception as exc:

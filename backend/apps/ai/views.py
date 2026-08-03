@@ -6,8 +6,24 @@ from django.db.models.functions import TruncMonth
 from django.http import StreamingHttpResponse
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
+from rest_framework.renderers import BaseRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+
+class SSERenderer(BaseRenderer):
+    """Content-negotiation shim for EventSource. Without this, DRF returns
+    406 Not Acceptable because its default renderers (JSON, BrowsableAPI)
+    don't match the `Accept: text/event-stream` header the browser sends.
+    We never actually render through this — the view returns a
+    StreamingHttpResponse directly."""
+
+    media_type = "text/event-stream"
+    format = "sse"
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        # Not used; the view streams via StreamingHttpResponse.
+        return data
 
 from apps.applications.models import CVVersion
 from apps.billing.quotas import (
@@ -16,7 +32,7 @@ from apps.billing.quotas import (
 )
 from llm_providers.registry import PROVIDER_INFO
 
-from .models import AIUsageLog, CoverLetter
+from .models import AIGeneration, AIUsageLog, CoverLetter
 from .serializers import (
     ATSScoreRequestSerializer,
     CoverLetterRequestSerializer,
@@ -147,6 +163,39 @@ class CoverLetterListView(generics.ListAPIView):
 
     def get_queryset(self):
         return CoverLetter.objects.filter(user=self.request.user)
+
+
+class CoverLetterDetailView(generics.RetrieveDestroyAPIView):
+    serializer_class = CoverLetterSerializer
+
+    def get_queryset(self):
+        return CoverLetter.objects.filter(user=self.request.user)
+
+
+class AIGenerationListView(generics.ListAPIView):
+    """History for Q&A, fit-score, and ATS-score outputs.
+
+    Filter by `?feature=qa|fit_score|ats_score`; omit for all."""
+
+    from .serializers import AIGenerationSerializer
+
+    serializer_class = AIGenerationSerializer
+
+    def get_queryset(self):
+        qs = AIGeneration.objects.filter(user=self.request.user)
+        feature = self.request.query_params.get("feature")
+        if feature in {"qa", "fit_score", "ats_score"}:
+            qs = qs.filter(feature=feature)
+        return qs
+
+
+class AIGenerationDetailView(generics.RetrieveDestroyAPIView):
+    from .serializers import AIGenerationSerializer
+
+    serializer_class = AIGenerationSerializer
+
+    def get_queryset(self):
+        return AIGeneration.objects.filter(user=self.request.user)
 
 
 class QAView(APIView):
@@ -348,6 +397,7 @@ class CoverLetterStreamView(APIView):
 
     permission_classes = [AllowAny]
     authentication_classes = []  # auth is via stream_token instead
+    renderer_classes = [SSERenderer]  # accept `text/event-stream` from EventSource
 
     # Hard maximum stream lifetime — even if Redis hangs we won't keep a
     # connection open forever

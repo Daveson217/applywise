@@ -73,3 +73,40 @@ class AIUsageLog(models.Model):
 
     def __str__(self):
         return f"{self.feature} by {self.user.email} ({self.provider})"
+
+
+class AIGeneration(models.Model):
+    """History of Q&A / fit-score / ATS-score outputs so users can revisit
+    past results. Cover letters have their own dedicated model — this is
+    for the shorter, structured JSON features."""
+
+    HISTORY_FEATURES = [
+        ("qa", "Question Answer"),
+        ("fit_score", "Fit Score"),
+        ("ats_score", "ATS Score"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="ai_generations",
+    )
+    feature = models.CharField(max_length=20, choices=HISTORY_FEATURES)
+    # Human-readable one-line label for list views (job title, question preview, etc.)
+    title = models.CharField(max_length=255, blank=True)
+    # The prompt inputs we sent (so the user can see what they asked)
+    input = models.JSONField(default=dict, blank=True)
+    # The parsed result the LLM returned
+    result = models.JSONField(default=dict, blank=True)
+    provider = models.CharField(max_length=20, blank=True)
+    model = models.CharField(max_length=50, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "feature", "-created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.feature}: {self.title or '(untitled)'}"

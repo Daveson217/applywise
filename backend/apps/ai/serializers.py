@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import AIUsageLog, CoverLetter
+from .models import AIGeneration, AIUsageLog, CoverLetter
 
 
 class CoverLetterSerializer(serializers.ModelSerializer):
@@ -79,6 +79,22 @@ class ATSScoreRequestSerializer(serializers.Serializer):
     cv_version_id = serializers.IntegerField()
     provider = serializers.CharField(required=False)
     model = serializers.CharField(required=False)
+
+
+class AIGenerationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AIGeneration
+        fields = [
+            "id",
+            "feature",
+            "title",
+            "input",
+            "result",
+            "provider",
+            "model",
+            "created_at",
+        ]
+        read_only_fields = fields
 
 
 class AIUsageLogSerializer(serializers.ModelSerializer):
