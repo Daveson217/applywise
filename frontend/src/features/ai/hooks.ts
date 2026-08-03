@@ -41,6 +41,22 @@ export function useComputeATSScore() {
   });
 }
 
+export function useTaskResult(taskId: string | null) {
+  return useQuery({
+    queryKey: ["ai", "task", taskId],
+    queryFn: () => aiApi.getTaskResult(taskId!).then((r) => r.data),
+    enabled: !!taskId,
+    // Poll every 2s while pending; stop once we have a terminal state.
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data) return 2000;
+      return data.status === "pending" ? 2000 : false;
+    },
+    // Don't cache a stale result under the same taskId if the user resubmits.
+    gcTime: 0,
+  });
+}
+
 export function useAIUsage() {
   return useQuery({
     queryKey: ["ai", "usage"],

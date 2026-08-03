@@ -305,6 +305,38 @@ class AIUsageView(APIView):
         )
 
 
+class TaskResultView(APIView):
+    """Poll Celery for the result of a task previously enqueued via QAView,
+    FitScoreView, or ATSScoreView.
+
+    Auth: task_id is a UUID (~122 bits of entropy) so guessing another user's
+    task is infeasible. The task itself doesn't include user identity in its
+    return value, so we treat the unguessable ID as capability.
+
+    Returns:
+      {status: "pending" | "success" | "failure", result?: ..., error?: str}
+    """
+
+    def get(self, request, task_id):
+        from celery.result import AsyncResult
+
+        result = AsyncResult(task_id)
+        state = result.state  # PENDING, STARTED, RETRY, SUCCESS, FAILURE
+
+        if state == "SUCCESS":
+            return Response({"status": "success", "result": result.result})
+        if state == "FAILURE":
+            # result.result is the exception instance — surface a friendly string
+            return Response(
+                {"status": "failure", "error": str(result.result)},
+                status=status.HTTP_200_OK,
+            )
+        # Everything else — PENDING / STARTED / RETRY — is "still working."
+        # Celery returns PENDING for both "unknown id" and "not started yet";
+        # we can't reliably distinguish, so treat both as pending.
+        return Response({"status": "pending"})
+
+
 class CoverLetterStreamView(APIView):
     """SSE endpoint streaming cover letter generation token-by-token.
 

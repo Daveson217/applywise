@@ -9,10 +9,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCVVersions } from "@/features/cv/hooks";
-import { CheckCircle, Loader2, MessageSquare } from "lucide-react";
+import { AlertCircle, Loader2, MessageSquare } from "lucide-react";
 import { useState } from "react";
 
-import { useAnswerQuestion } from "../hooks";
+import { useAnswerQuestion, useTaskResult } from "../hooks";
 
 export function QAForm() {
   const { data: cvData } = useCVVersions();
@@ -22,42 +22,80 @@ export function QAForm() {
   const [cvVersionId, setCvVersionId] = useState<number | "">("");
   const [jobContext, setJobContext] = useState("");
   const [charLimit, setCharLimit] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [taskId, setTaskId] = useState<string | null>(null);
 
   const cvVersions = cvData?.results || [];
+
+  const taskQuery = useTaskResult(taskId);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!cvVersionId || !question) return;
 
-    await answerMutation.mutateAsync({
+    const response = await answerMutation.mutateAsync({
       question,
       cv_version_id: Number(cvVersionId),
       job_context: jobContext || undefined,
       character_limit: charLimit ? Number(charLimit) : undefined,
     });
-    setSubmitted(true);
+    setTaskId(response.data.task_id);
   }
 
-  if (submitted && answerMutation.isSuccess) {
+  function reset() {
+    setTaskId(null);
+    answerMutation.reset();
+  }
+
+  // Result / pending / error views
+  if (taskId) {
+    const status = taskQuery.data?.status;
+    const answer = (taskQuery.data?.result as { answer?: string } | undefined)
+      ?.answer;
+
+    if (status === "success" && answer) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <MessageSquare className="h-4 w-4 text-primary" />
+              Answer
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="whitespace-pre-wrap rounded-md border bg-muted/30 p-4 text-sm">
+              {answer}
+            </div>
+            <Button variant="outline" onClick={reset}>
+              Ask Another Question
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+    if (status === "failure") {
+      return (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <AlertCircle className="mx-auto mb-3 h-10 w-10 text-destructive" />
+            <h3 className="font-semibold">Generation failed</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {taskQuery.data?.error ?? "The AI provider returned an error."}
+            </p>
+            <Button variant="outline" className="mt-3" onClick={reset}>
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
     return (
       <Card>
         <CardContent className="py-8 text-center">
-          <CheckCircle className="mx-auto mb-3 h-10 w-10 text-green-500" />
-          <h3 className="font-semibold">Answer Queued</h3>
+          <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-primary" />
+          <h3 className="font-semibold">Generating your answer…</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Your answer is being generated.
+            This usually takes a few seconds.
           </p>
-          <Button
-            variant="outline"
-            className="mt-3"
-            onClick={() => {
-              setSubmitted(false);
-              answerMutation.reset();
-            }}
-          >
-            Ask Another Question
-          </Button>
         </CardContent>
       </Card>
     );

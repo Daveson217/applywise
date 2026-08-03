@@ -90,4 +90,15 @@ export const aiApi = {
   }) => api.post<TaskResult>("/ai/ats-score/", data),
 
   getUsage: () => api.get<AIUsage>("/ai/usage/"),
+
+  getTaskResult: (taskId: string) =>
+    api.get<{
+      status: "pending" | "success" | "failure";
+      // Result shape varies by task; each caller casts:
+      // Q&A → { answer: string }
+      // Fit  → { score, ... }
+      // ATS  → { score, keywords, ... }
+      result?: Record<string, unknown>;
+      error?: string;
+    }>(`/ai/task/${taskId}/`),
 };

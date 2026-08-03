@@ -19,4 +19,5 @@ urlpatterns = [
     path("ai/fit-score/", views.FitScoreView.as_view(), name="ai-fit-score"),
     path("ai/ats-score/", views.ATSScoreView.as_view(), name="ai-ats-score"),
     path("ai/usage/", views.AIUsageView.as_view(), name="ai-usage"),
+    path("ai/task/<str:task_id>/", views.TaskResultView.as_view(), name="ai-task-result"),
 ]
